@@ -1,17 +1,23 @@
 ### Health
-GET http://localhost:3100/health
+GET http://localhost:80
+Host: search.test.mangwale.ai/health
 
 ### Basic search + facets
-GET http://localhost:3100/search/food?q=kofta
+GET http://localhost:80
+Host: search.test.mangwale.ai/search/food?q=kofta
 
 ### Veg + price filters
-GET http://localhost:3100/search/food?q=burger&veg=1&price_min=100&price_max=300
+GET http://localhost:80
+Host: search.test.mangwale.ai/search/food?q=burger&veg=1&price_min=100&price_max=300
 
 ### Pagination
-GET http://localhost:3100/search/food?q=pizza&size=10&page=2
+GET http://localhost:80
+Host: search.test.mangwale.ai/search/food?q=pizza&size=10&page=2
 
 ### Geo-ranked items (returns distance_km)
-GET http://localhost:3100/search/food?q=kofta&lat=19.9975&lon=73.7898&radius_km=10&size=5
+GET http://localhost:80
+Host: search.test.mangwale.ai/search/food?q=kofta&lat=19.9975&lon=73.7898&radius_km=10&size=5
 
 ### Nearby stores (no PII)
-GET http://localhost:3100/search/food/stores?lat=19.9975&lon=73.7898&radius_km=10&size=5
+GET http://localhost:80
+Host: search.test.mangwale.ai/search/food/stores?lat=19.9975&lon=73.7898&radius_km=10&size=5

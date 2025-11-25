@@ -16,14 +16,21 @@ This repository contains a local, self-hosted stack to run the cross-module sear
 2. Start services:
    docker compose up -d
 3. Verify health:
-   - OpenSearch: http://localhost:9200
-   - Dashboards: http://localhost:5601
-   - MySQL: 127.0.0.1:3306 (root/secret)
-   - Adminer: http://localhost:8080
-   - Redis: 127.0.0.1:6379
-   - ClickHouse: http://localhost:8123
+   - API & Frontend: http://localhost (via Traefik, requires Host header `search.test.mangwale.ai` or DNS)
+   - Traefik Dashboard: http://localhost:8081
+   - Internal services (MySQL, Redis, OpenSearch) are isolated on `search-network`.
 
-## Next
+## Accessing Services
+The stack uses Traefik as a reverse proxy.
+- **API**: `http://search.test.mangwale.ai/search` (Mapped to localhost:80)
+- **Frontend**: `http://search.test.mangwale.ai/` (Mapped to localhost:80)
+
+To access locally, add to your `/etc/hosts`:
+```
+127.0.0.1 search.test.mangwale.ai
+```
+
+## Real data workflow
 - Add Debezium MySQL connector to Kafka Connect to stream DB changes.
 - Scaffold Nest.js `apps/search-api` and indexer workers.
 - Define index schemas & analyzers, then bootstrap collections.
@@ -63,7 +70,7 @@ Run it:
 npm run web:dev
 ```
 
-It proxies to the API at http://localhost:3100. Make sure your Nest API is running and indices are seeded.
+It proxies to the API via Traefik (http://localhost:80). Make sure your Docker stack is running.
 
 If the CDC consumer runs on host, export KAFKA_BROKER=localhost:9092 before starting it. If you see the frontend but suggestions are empty, verify indices with `_cat/indices` and re-run the index scripts.
 

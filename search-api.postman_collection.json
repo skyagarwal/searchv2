@@ -13,7 +13,7 @@
 					"name": "Root",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [{"key": "Host", "value": "search.test.mangwale.ai", "type": "text"}],
 						"url": {
 							"raw": "{{baseUrl}}/",
 							"host": [
@@ -29,7 +29,7 @@
 					"name": "Health Check",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [{"key": "Host", "value": "search.test.mangwale.ai", "type": "text"}],
 						"url": {
 							"raw": "{{baseUrl}}/health",
 							"host": [
@@ -50,7 +50,7 @@
 					"name": "Search Items",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [{"key": "Host", "value": "search.test.mangwale.ai", "type": "text"}],
 						"url": {
 							"raw": "{{baseUrl}}/v2/search/items?q=paneer&module_id=4&veg=1",
 							"host": [
@@ -105,7 +105,7 @@
 					"name": "Search Stores",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [{"key": "Host", "value": "search.test.mangwale.ai", "type": "text"}],
 						"url": {
 							"raw": "{{baseUrl}}/v2/search/stores?q=pizza&module_id=4&lat=19.9975&lon=73.7898",
 							"host": [
@@ -151,7 +151,7 @@
 					"name": "Suggest",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [{"key": "Host", "value": "search.test.mangwale.ai", "type": "text"}],
 						"url": {
 							"raw": "{{baseUrl}}/v2/search/suggest?q=pa&module_id=4",
 							"host": [
@@ -184,7 +184,7 @@
 					"name": "Unified Search",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [{"key": "Host", "value": "search.test.mangwale.ai", "type": "text"}],
 						"url": {
 							"raw": "{{baseUrl}}/search?q=milk&module_ids=4,5",
 							"host": [
@@ -221,7 +221,7 @@
 					"name": "Agent Search",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [{"key": "Host", "value": "search.test.mangwale.ai", "type": "text"}],
 						"url": {
 							"raw": "{{baseUrl}}/search/agent?q=go to ganesh sweets and order paneer",
 							"host": [
@@ -244,7 +244,7 @@
 					"name": "Recommendations",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [{"key": "Host", "value": "search.test.mangwale.ai", "type": "text"}],
 						"url": {
 							"raw": "{{baseUrl}}/search/recommendations/:itemId?module_id=4",
 							"host": [
@@ -284,7 +284,7 @@
 					"name": "Search Food Items",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [{"key": "Host", "value": "search.test.mangwale.ai", "type": "text"}],
 						"url": {
 							"raw": "{{baseUrl}}/search/food?q=pizza&veg=1",
 							"host": [
@@ -311,7 +311,7 @@
 					"name": "Search Food Stores",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [{"key": "Host", "value": "search.test.mangwale.ai", "type": "text"}],
 						"url": {
 							"raw": "{{baseUrl}}/search/food/stores?lat=19.9975&lon=73.7898",
 							"host": [
@@ -339,7 +339,7 @@
 					"name": "Food Category Browse",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [{"key": "Host", "value": "search.test.mangwale.ai", "type": "text"}],
 						"url": {
 							"raw": "{{baseUrl}}/search/food/category?category_id=288",
 							"host": [
@@ -363,7 +363,7 @@
 					"name": "Semantic Food Search",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [{"key": "Host", "value": "search.test.mangwale.ai", "type": "text"}],
 						"url": {
 							"raw": "{{baseUrl}}/search/semantic/food?q=spicy chicken",
 							"host": [
@@ -392,7 +392,7 @@
 					"name": "Search Ecom Items",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [{"key": "Host", "value": "search.test.mangwale.ai", "type": "text"}],
 						"url": {
 							"raw": "{{baseUrl}}/search/ecom?q=milk",
 							"host": [
@@ -415,7 +415,7 @@
 					"name": "Search Ecom Stores",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [{"key": "Host", "value": "search.test.mangwale.ai", "type": "text"}],
 						"url": {
 							"raw": "{{baseUrl}}/search/ecom/stores?lat=19.9975&lon=73.7898",
 							"host": [
@@ -448,7 +448,7 @@
 					"name": "Trending Queries",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [{"key": "Host", "value": "search.test.mangwale.ai", "type": "text"}],
 						"url": {
 							"raw": "{{baseUrl}}/analytics/trending?window=7d",
 							"host": [
@@ -481,7 +481,7 @@
 					"name": "Transcribe Audio",
 					"request": {
 						"method": "POST",
-						"header": [],
+						"header": [{"key": "Host", "value": "search.test.mangwale.ai", "type": "text"}],
 						"body": {
 							"mode": "formdata",
 							"formdata": [
@@ -510,7 +510,7 @@
 	"variable": [
 		{
 			"key": "baseUrl",
-			"value": "http://localhost:3100",
+			"value": "http://localhost:80",
 			"type": "string"
 		}
 	]

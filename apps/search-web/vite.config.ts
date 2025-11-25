@@ -12,10 +12,34 @@ export default defineConfig(({ mode }) => {
     port: 5173,
     allowedHosts: ['localhost', 'search.mangwale.ai', 'search.test.mangwale.ai', 'host.docker.internal'],
     proxy: {
-      '/search': process.env.API_URL || 'http://localhost:3100',
-      '/analytics': process.env.API_URL || 'http://localhost:3100',
-      '/health': process.env.API_URL || 'http://localhost:3100',
-      '/v2': process.env.API_URL || 'http://localhost:3100',
+      '/search': {
+        target: process.env.API_URL || 'http://localhost:80',
+        changeOrigin: true,
+        headers: {
+          Host: 'search.test.mangwale.ai'
+        }
+      },
+      '/analytics': {
+        target: process.env.API_URL || 'http://localhost:80',
+        changeOrigin: true,
+        headers: {
+          Host: 'search.test.mangwale.ai'
+        }
+      },
+      '/health': {
+        target: process.env.API_URL || 'http://localhost:80',
+        changeOrigin: true,
+        headers: {
+          Host: 'search.test.mangwale.ai'
+        }
+      },
+      '/v2': {
+        target: process.env.API_URL || 'http://localhost:80',
+        changeOrigin: true,
+        headers: {
+          Host: 'search.test.mangwale.ai'
+        }
+      },
     },
   }
   if (useHttps) {

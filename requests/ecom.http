@@ -1,14 +1,19 @@
 ### Health
-GET http://localhost:3100/health
+GET http://localhost:80
+Host: search.test.mangwale.ai/health
 
 ### Ecom search items
-GET http://localhost:3100/search/ecom?q=milk&page=1&size=10
+GET http://localhost:80
+Host: search.test.mangwale.ai/search/ecom?q=milk&page=1&size=10
 
 ### Ecom stores nearby
-GET http://localhost:3100/search/ecom/stores?q=&lat=19.99&lon=73.78&radius_km=5&page=1&size=10
+GET http://localhost:80
+Host: search.test.mangwale.ai/search/ecom/stores?q=&lat=19.99&lon=73.78&radius_km=5&page=1&size=10
 
 ### Ecom suggest
-GET http://localhost:3100/search/ecom/suggest?q=mil&lat=19.99&lon=73.78
+GET http://localhost:80
+Host: search.test.mangwale.ai/search/ecom/suggest?q=mil&lat=19.99&lon=73.78
 
 ### Trending analytics (7d, ecom)
-GET http://localhost:3100/analytics/trending?window=7d&module=ecom
+GET http://localhost:80
+Host: search.test.mangwale.ai/analytics/trending?window=7d&module=ecom
