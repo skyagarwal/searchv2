@@ -70,9 +70,12 @@ function coerceDoc(doc) {
       if (Array.isArray(val)) {
         // could be array of {id:..} or primitives
         return val.map(x => {
-          if (x && typeof x === 'object' && x.id !== undefined) return String(x.id);
+          if (x && typeof x === 'object') {
+            if (x.id !== undefined) return String(x.id);
+            return null;
+          }
           return String(x);
-        });
+        }).filter(Boolean);
       }
       if (val && typeof val === 'object' && val.id !== undefined) return [String(val.id)];
       if (typeof val === 'string') {
@@ -96,16 +99,38 @@ function coerceDoc(doc) {
   // Normalize images to array of strings
   if (out.images !== undefined) {
     const v = out.images;
-    if (Array.isArray(v)) out.images = v.map(String);
-    else if (typeof v === 'string') {
-      try { const arr = JSON.parse(v); out.images = Array.isArray(arr) ? arr.map(String) : [v]; } catch { out.images = [v]; }
-    } else out.images = [];
+    const toImgStr = (val) => {
+      if (Array.isArray(val)) {
+        return val.map(x => {
+          if (x && typeof x === 'object') {
+             return x.img || x.image || x.url || JSON.stringify(x);
+          }
+          return String(x);
+        });
+      }
+      if (typeof val === 'string') {
+        try { 
+          const arr = JSON.parse(val); 
+          return Array.isArray(arr) ? toImgStr(arr) : [val]; 
+        } catch { return [val]; }
+      }
+      return [];
+    };
+    out.images = toImgStr(v);
   }
   // Coerce rating to number if possible
   if (out.rating !== undefined) {
     const r = Number(out.rating);
-  if (!Number.isNaN(r)) out.rating = r;
-  else if (typeof out.rating !== 'string') out.rating = JSON.stringify(out.rating);
+    if (!Number.isNaN(r)) out.rating = r;
+    else if (typeof out.rating !== 'string') out.rating = JSON.stringify(out.rating);
+  }
+
+  // Stringify complex objects that are not handled elsewhere
+  const complexFields = ['close_time_slot', 'meta', 'config'];
+  for (const f of complexFields) {
+    if (out[f] && typeof out[f] === 'object') {
+      out[f] = JSON.stringify(out[f]);
+    }
   }
 
   // Infer brand for ecom items if missing using a lightweight dictionary

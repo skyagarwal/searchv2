@@ -97,7 +97,7 @@ async function run() {
   // food_stores mappings
   const storesMappings = {
     properties: {
-  name: textWithKeyword(),
+      name: textWithKeyword(),
       slug: { type: 'keyword' },
       latitude: { type: 'keyword' },
       longitude: { type: 'keyword' },
@@ -114,14 +114,13 @@ async function run() {
       module_id: { type: 'long' },
       order_count: { type: 'integer' },
       total_order: { type: 'integer' },
+      rating: { type: 'keyword' }, // Added rating
       logo: { type: 'keyword' },
       cover_photo: { type: 'keyword' },
       created_at: { type: 'date', format: 'strict_date_optional_time||epoch_millis' },
       updated_at: { type: 'date', format: 'strict_date_optional_time||epoch_millis' },
     },
-  };
-
-  // food_categories mappings
+  };  // food_categories mappings
   const categoriesMappings = {
     properties: {
   name: textWithKeyword(),

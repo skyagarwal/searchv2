@@ -122,7 +122,7 @@ export default function App() {
   const [trending, setTrending] = useState<string[]>([])
   const [lat, setLat] = useState<number | ''>(()=>{ const v=localStorage.getItem('mw_lat'); return v? Number(v):'' })
   const [lon, setLon] = useState<number | ''>(()=>{ const v=localStorage.getItem('mw_lon'); return v? Number(v):'' })
-  const [radius, setRadius] = useState<number>(()=>{ const v=localStorage.getItem('mw_radius'); return v? Number(v):5 })
+  const [radius, setRadius] = useState<number>(()=>{ const v=localStorage.getItem('mw_radius'); return v? Number(v):50 })
   const [openNow, setOpenNow] = useState(false)
   const [vegFilter, setVegFilter] = useState<'all' | 'veg' | 'non-veg'>('all')
   const [ratingMin, setRatingMin] = useState<number | ''>('')
@@ -144,6 +144,9 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [searchMode, setSearchMode] = useState<'normal'|'agent'>('normal')
   const [agentPlan, setAgentPlan] = useState<any|null>(null)
+  const [semantic, setSemantic] = useState(false)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
   const mediaRecorderRef = useRef<any|null>(null)
   const mediaStreamRef = useRef<MediaStream|null>(null)
   const speechRecRef = useRef<any|null>(null)
@@ -208,9 +211,16 @@ export default function App() {
   useEffect(()=>{ if(lon!=='' ) localStorage.setItem('mw_lon', String(lon)); else localStorage.removeItem('mw_lon') }, [lon])
   useEffect(()=>{ localStorage.setItem('mw_radius', String(radius)) }, [radius])
 
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1)
+  }, [qDeb, module, vegFilter, openNow, ratingMin, priceMin, priceMax, categoryId, lat, lon, radius, activeTab, searchMode, storeId, storeIds, sortBy, semantic])
+
   useEffect(()=>{
     if (searchMode!=='normal') return
-    const params: Record<string, any> = { q: qDeb, page: 1, size: 20 }
+    let ignore = false
+    const params: Record<string, any> = { q: qDeb, page, size: 20 }
+    if (semantic) params.semantic = '1'
     
     // Enhanced veg/non-veg filtering: only for food & ecom
     if ((module==='food' || module==='ecom') && vegFilter !== 'all') {
@@ -235,11 +245,23 @@ export default function App() {
 
     setLoading(true)
     if (activeTab==='items') {
-      API.searchItems(getModuleId(module), params).then(d=>{ setSearchResp(d); setLoading(false) }).catch(()=>setLoading(false))
+      API.searchItems(getModuleId(module), params).then(d=>{ 
+        if (ignore) return
+        setSearchResp(prev => {
+          if (page === 1) return d
+          return { ...d, items: [...(prev?.items || []), ...d.items] }
+        })
+        setHasMore(d.items.length === 20)
+        setLoading(false) 
+      }).catch(()=>{ if(!ignore) setLoading(false) })
     } else {
-      API.searchStores(getModuleId(module), params).then(d=>{ setStoresResp(d); setLoading(false) }).catch(()=>setLoading(false))
+      API.searchStores(getModuleId(module), params).then(d=>{ 
+        if (ignore) return
+        setStoresResp(d); setLoading(false) 
+      }).catch(()=>{ if(!ignore) setLoading(false) })
     }
-  }, [qDeb, module, vegFilter, openNow, ratingMin, priceMin, priceMax, categoryId, lat, lon, radius, activeTab, searchMode, storeId, storeIds, sortBy])
+    return () => { ignore = true }
+  }, [qDeb, module, vegFilter, openNow, ratingMin, priceMin, priceMax, categoryId, lat, lon, radius, activeTab, searchMode, storeId, storeIds, sortBy, semantic, page])
 
   const onSelectSuggestion = (text: string) => {
   setQ(text); setShowSuggest(false); setSearchMode('normal'); setAgentPlan(null)
@@ -457,6 +479,7 @@ export default function App() {
             </>
           )}
           {module==='food' && <div className={"chip "+(openNow?'active':'')} onClick={()=>setOpenNow(v=>!v)}>Open now</div>}
+          <div className={"chip "+(semantic?'active':'')} onClick={()=>setSemantic(v=>!v)}>✨ Semantic</div>
           {(module==='food' || module==='ecom') && (
             <div className={"chip "+(ratingMin===4?'active':'')} onClick={()=>setRatingMin(ratingMin===4?'':4)}>⭐ 4.0+</div>
           )}
@@ -469,9 +492,9 @@ export default function App() {
           )}
           {!(module==='movies' && activeTab==='items') && (
             <>
-              <div className={"chip "+(radius===2?'active':'')} onClick={()=>setRadius(2)}>2 km</div>
               <div className={"chip "+(radius===5?'active':'')} onClick={()=>setRadius(5)}>5 km</div>
               <div className={"chip "+(radius===10?'active':'')} onClick={()=>setRadius(10)}>10 km</div>
+              <div className={"chip "+(radius===50?'active':'')} onClick={()=>setRadius(50)}>50 km</div>
             </>
           )}
         </div>
@@ -514,7 +537,7 @@ export default function App() {
           </div>
           <div>
             <label>Radius (km)</label><br />
-            <input type="range" min={1} max={20} value={radius} onChange={e=>setRadius(Number(e.target.value))} />
+            <input type="range" min={1} max={100} value={radius} onChange={e=>setRadius(Number(e.target.value))} />
             <div className="meta">{radius} km</div>
           </div>
           {(module==='food' || module==='ecom') && (
@@ -617,15 +640,15 @@ export default function App() {
             <div className="meta">Popular Categories</div>
             <div className="chips">
               {(facetCategories.length>0 ? facetCategories.slice(0,8) : [
-                { key:'chinese', name:'Chinese', doc_count:0 },
-                { key:'sweets', name:'Sweets', doc_count:0 },
-                { key:'starters', name:'Starters', doc_count:0 },
-                { key:'rolls', name:'Rolls', doc_count:0 },
-                { key:'desserts', name:'Desserts', doc_count:0 },
-                { key:'chaat', name:'Chaat', doc_count:0 },
-                { key:'dairy', name:'Dairy product', doc_count:0 },
-                { key:'frozen', name:'Frozen Foods', doc_count:0 },
-                { key:'ready-to-eat', name:'Ready to Eat', doc_count:0 },
+                { key:'846', name:'Chinese', doc_count:0 },
+                { key:'21', name:'Sweets', doc_count:0 },
+                { key:'98', name:'Starters', doc_count:0 },
+                { key:'99', name:'Rolls', doc_count:0 },
+                { key:'101', name:'Desserts', doc_count:0 },
+                { key:'120', name:'Chaat', doc_count:0 },
+                { key:'121', name:'Dairy product', doc_count:0 },
+                // { key:'frozen', name:'Frozen Foods', doc_count:0 },
+                // { key:'ready-to-eat', name:'Ready to Eat', doc_count:0 },
               ]).map((fc:any)=> (
                 <div key={fc.key} className={"chip "+(String(categoryId)===String(fc.key)?'active':'')} onClick={()=>setCategoryId(String(fc.key))}>
                   {fc.name || fc.key}{fc.doc_count? <span className="meta" style={{marginLeft:4}}>({fc.doc_count})</span>: null}
@@ -777,6 +800,9 @@ export default function App() {
                 )}
               </div>
             ))}
+            {hasMore && !loading && (
+              <button className="secondary" style={{width:'100%', marginTop:16}} onClick={()=>setPage(p=>p+1)}>Load More</button>
+            )}
           </div>
         ) : (
           <div className="results">

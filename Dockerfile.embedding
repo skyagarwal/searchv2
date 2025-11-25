@@ -10,7 +10,7 @@ RUN pip install --no-cache-dir \
     pydantic
 
 # Copy embedding service
-COPY embedding-service.py .
+COPY scripts/embedding-service.py .
 
 # Download model at build time (cache it in the image)
 RUN python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"

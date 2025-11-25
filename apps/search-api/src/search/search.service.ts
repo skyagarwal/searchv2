@@ -236,9 +236,9 @@ export class SearchService {
     // Vegetarian filter
     const veg = filters?.veg;
     if (veg === '1' || veg === 'true') {
-      filterClauses.push({ term: { veg: 1 } });
+      filterClauses.push({ term: { veg: true } });
     } else if (veg === '0' || veg === 'false') {
-      filterClauses.push({ term: { veg: 0 } });
+      filterClauses.push({ term: { veg: false } });
     }
 
     // Price range filters
@@ -346,8 +346,29 @@ export class SearchService {
     };
 
     // Execute search
-    const res = await this.client.search({ index: alias, body });
-    const hits = (res.body.hits?.hits || []) as Array<{ _id: string; _source: any; fields?: any; _score?: number; sort?: any[] }>;
+    let res = await this.client.search({ index: alias, body });
+    let hits = (res.body.hits?.hits || []) as Array<{ _id: string; _source: any; fields?: any; _score?: number; sort?: any[] }>;
+
+    // Fallback: If no results found with radius filter, try without radius filter (but keep sorting by distance)
+    if (hits.length === 0 && hasGeo && radiusKm) {
+      this.logger.log(`[searchCategory] No results within ${radiusKm}km, retrying without radius filter`);
+      
+      // Remove geo_distance filter
+      const fallbackFilterClauses = filterClauses.filter(f => !f.geo_distance);
+      
+      const fallbackBody = {
+        ...body,
+        query: {
+          bool: {
+            must: must.length ? must : [{ match_all: {} }],
+            filter: fallbackFilterClauses,
+          },
+        },
+      };
+
+      res = await this.client.search({ index: alias, body: fallbackBody });
+      hits = (res.body.hits?.hits || []) as Array<{ _id: string; _source: any; fields?: any; _score?: number; sort?: any[] }>;
+    }
 
     // Get store names for items
     const storeIds = [...new Set(hits.map(h => h._source?.store_id).filter(Boolean))] as string[];
@@ -548,9 +569,9 @@ export class SearchService {
     // Vegetarian filter
     const veg = filters?.veg;
     if (veg === '1' || veg === 'true') {
-      filterClauses.push({ term: { veg: 1 } });
+      filterClauses.push({ term: { veg: true } });
     } else if (veg === '0' || veg === 'false') {
-      filterClauses.push({ term: { veg: 0 } });
+      filterClauses.push({ term: { veg: false } });
     }
 
     // Brand filter (for e-commerce)
@@ -916,9 +937,9 @@ export class SearchService {
     const veg = filters?.veg;
     const vegStr = String(veg);
     if (vegStr === '1' || vegStr === 'true' || vegStr === 'veg') {
-      filterClauses.push({ term: { veg: 1 } });
+      filterClauses.push({ term: { veg: true } });
     } else if (vegStr === '0' || vegStr === 'false' || vegStr === 'non-veg') {
-      filterClauses.push({ term: { veg: 0 } });
+      filterClauses.push({ term: { veg: false } });
     }
 
     // Category filter
@@ -1864,9 +1885,9 @@ export class SearchService {
     // Veg filter
     const veg = filters?.veg;
     if (veg === '1' || veg === 'true' || veg === 'veg') {
-      filterClauses.push({ term: { veg: 1 } });
+      filterClauses.push({ term: { veg: true } });
     } else if (veg === '0' || veg === 'false' || veg === 'non-veg') {
-      filterClauses.push({ term: { veg: 0 } });
+      filterClauses.push({ term: { veg: false } });
     }
 
     // Category filter (already validated above)
@@ -3990,9 +4011,16 @@ export class SearchService {
     if (filters?.category_id && filters?.module_id) {
       const isValid = await this.moduleService.validateCategoryModule(Number(filters.category_id), filters.module_id);
       if (!isValid) {
-        throw new BadRequestException(
-          `Category ${filters.category_id} does not exist in module ${filters.module_id}`
-        );
+        // Check if category exists in another module
+        const correctModuleId = await this.moduleService.getModuleIdForCategory(Number(filters.category_id));
+        if (correctModuleId) {
+          this.logger.warn(`[searchItemsByModule] Category ${filters.category_id} belongs to module ${correctModuleId}, not ${filters.module_id}. Switching module context.`);
+          filters.module_id = correctModuleId;
+        } else {
+          throw new BadRequestException(
+            `Category ${filters.category_id} does not exist in module ${filters.module_id}`
+          );
+        }
       }
     }
 
@@ -4062,10 +4090,9 @@ export class SearchService {
     // Veg filter
     const veg = filters?.veg;
     if (veg === '1' || veg === 'true' || veg === 'veg') {
-      // Use 1 instead of true to avoid "For input string: 'true'" error
-      filterClauses.push({ term: { veg: 1 } });
+      filterClauses.push({ term: { veg: true } });
     } else if (veg === '0' || veg === 'false' || veg === 'non-veg') {
-      filterClauses.push({ term: { veg: 0 } });
+      filterClauses.push({ term: { veg: false } });
     }
 
     // Price range
@@ -4089,7 +4116,7 @@ export class SearchService {
     // Geo filter
     const lat = filters?.lat;
     const lon = filters?.lon;
-    const radiusKm = filters?.radius_km;
+    const radiusKm = filters?.radius_km ? Number(filters.radius_km) : undefined;
     // Treat lat=0, lon=0 as no location (invalid coordinates)
     const hasGeo = lat !== undefined && !Number.isNaN(lat) && lon !== undefined && !Number.isNaN(lon) && 
                    !(lat === 0 && lon === 0);
@@ -4188,9 +4215,25 @@ export class SearchService {
 
         const itemIndices = this.getAllItemIndices();
         const results = await Promise.all(
-          itemIndices.map(index => 
-            this.client.search({ index, body }).catch(() => ({ body: { hits: { hits: [], total: { value: 0 } } } }))
-          )
+          itemIndices.map(index => {
+            // Check if index supports geo features (currently only food_items)
+            const supportsGeo = index === 'food_items';
+            let indexBody = body;
+            
+            if (!supportsGeo && hasGeo) {
+              indexBody = { ...body };
+              // Remove geo sort, keep score sort
+              indexBody.sort = ['_score'];
+              // Remove script_fields
+              indexBody.script_fields = undefined;
+              // Remove geo_distance filter
+              if (indexBody.query?.bool?.filter) {
+                indexBody.query.bool.filter = indexBody.query.bool.filter.filter((f: any) => !f.geo_distance);
+              }
+            }
+            
+            return this.client.search({ index, body: indexBody }).catch(() => ({ body: { hits: { hits: [], total: { value: 0 } } } }));
+          })
         );
 
         let allItems: any[] = [];
@@ -4275,7 +4318,39 @@ export class SearchService {
     const results = await Promise.all(
       itemIndices.map(async (index) => {
         try {
-          const res = await this.client.search({ index, body });
+          // Check if index supports geo features (currently only food_items)
+          const supportsGeo = index === 'food_items';
+          // Check if index supports order_count (food_items and ecom_items)
+          const supportsOrderCount = index === 'food_items' || index === 'ecom_items';
+          
+          let indexBody = body;
+          
+          if (!supportsGeo && hasGeo) {
+             indexBody = { ...body };
+             // Remove geo sort if present
+             if (sortOrder === 'distance') {
+                 if (supportsOrderCount) {
+                    indexBody.sort = [{ order_count: { order: 'desc', missing: 0 } }];
+                 } else {
+                    indexBody.sort = ['_score'];
+                 }
+             }
+             // Remove script_fields
+             indexBody.script_fields = undefined;
+             // Remove geo_distance filter
+             if (indexBody.query?.bool?.filter) {
+                 const newFilters = indexBody.query.bool.filter.filter((f: any) => !f.geo_distance);
+                 indexBody.query = {
+                     ...indexBody.query,
+                     bool: {
+                         ...indexBody.query.bool,
+                         filter: newFilters
+                     }
+                 };
+             }
+          }
+
+          const res = await this.client.search({ index, body: indexBody });
           this.logger.debug(`[searchItemsByModule] Index ${index}: found ${res.body.hits?.total?.value || 0} hits`);
           return res;
         } catch (err: any) {
@@ -4339,6 +4414,102 @@ export class SearchService {
         });
       });
     });
+
+    this.logger.log(`[searchItemsByModule] Initial search total hits: ${totalHits}. hasGeo: ${hasGeo}, radiusKm: ${radiusKm}`);
+
+    // Fallback: If no results found with radius filter, try without radius filter
+    if (totalHits === 0 && hasGeo && radiusKm) {
+      this.logger.log(`[searchItemsByModule] No results within ${radiusKm}km, retrying without radius filter`);
+      
+      const fallbackResults = await Promise.all(
+        itemIndices.map(async (index) => {
+          try {
+            // Determine if this index supports geo features
+            // Currently only food_items is guaranteed to have store_location properly mapped for all items
+            const supportsGeo = index === 'food_items'; 
+            const supportsOrderCount = index === 'food_items' || index === 'ecom_items';
+            this.logger.debug(`[searchItemsByModule] Fallback for index ${index}. Supports geo: ${supportsGeo}`);
+            
+            const indexBody = {
+              ...body,
+              query: {
+                bool: {
+                  must: must.length ? must : [{ match_all: {} }],
+                  filter: filterClauses.filter(f => !f.geo_distance),
+                },
+              },
+            };
+
+            // If index doesn't support geo, remove geo sort and script fields to avoid errors
+            if (!supportsGeo) {
+               // Use default sort (popularity) instead of geo distance
+               if (supportsOrderCount) {
+                   indexBody.sort = [{ order_count: { order: 'desc', missing: 0 } }]; 
+               } else {
+                   indexBody.sort = ['_score'];
+               }
+               indexBody.script_fields = undefined;
+            }
+
+            const res = await this.client.search({ index, body: indexBody });
+            this.logger.debug(`[searchItemsByModule] Fallback Index ${index}: found ${res.body.hits?.total?.value || 0} hits`);
+            return res;
+          } catch (err: any) {
+            this.logger.warn(`[searchItemsByModule] Fallback search failed for index ${index}: ${err.message}`);
+            return { body: { hits: { hits: [], total: { value: 0 } } } };
+          }
+        })
+      );
+      
+      // Reset and repopulate
+      allItems = [];
+      totalHits = 0;
+      
+      fallbackResults.forEach(res => {
+        const hits = res.body.hits?.hits || [];
+        totalHits += res.body.hits?.total?.value ?? 0;
+        hits.forEach((h: any) => {
+          // Extract distance from script_fields or sort array
+          let distance = h.fields?.distance_km?.[0];
+          
+          // If not in script_fields, check sort array (when using _geo_distance sort)
+          if (distance === undefined || distance === null) {
+            if (h.sort && Array.isArray(h.sort) && h.sort.length > 0) {
+              const sortDistance = h.sort[0];
+              if (typeof sortDistance === 'number') {
+                if (sortDistance > 1000) {
+                  distance = sortDistance / 1000.0;
+                } else {
+                  distance = sortDistance;
+                }
+              }
+            }
+          }
+          
+          if (distance !== undefined && distance !== null && distance > 1000 && h.fields?.distance_km?.[0] === distance) {
+            distance = distance / 1000.0;
+          }
+          
+          if ((distance === undefined || distance === null) && hasGeo && h._source?.store_location) {
+            const storeLoc = h._source.store_location;
+            if (storeLoc?.lat && storeLoc?.lon) {
+              const storeLat = parseFloat(String(storeLoc.lat));
+              const storeLon = parseFloat(String(storeLoc.lon));
+              if (!Number.isNaN(storeLat) && !Number.isNaN(storeLon)) {
+                distance = this.calculateDistance(lat!, lon!, storeLat, storeLon);
+              }
+            }
+          }
+          
+          allItems.push({
+            id: h._id,
+            score: h._score,
+            distance_km: distance !== undefined && distance !== null ? distance : (hasGeo ? undefined : undefined),
+            ...h._source,
+          });
+        });
+      });
+    }
 
     // Enhanced sorting with priority: 1) Item name matches, 2) Store name matches, 3) Distance
     // First, mark items by their match type
@@ -4958,10 +5129,17 @@ export class SearchService {
       this.logger.debug(`[searchStoresByModule] Validating category ${filters.category_id} belongs to module ${filters.module_id}`);
       const isValid = await this.moduleService.validateCategoryModule(Number(filters.category_id), filters.module_id);
       if (!isValid) {
-        this.logger.warn(`[searchStoresByModule] Category ${filters.category_id} does not exist in module ${filters.module_id}`);
-        throw new BadRequestException(
-          `Category ${filters.category_id} does not exist in module ${filters.module_id}`
-        );
+        // Check if category exists in another module
+        const correctModuleId = await this.moduleService.getModuleIdForCategory(Number(filters.category_id));
+        if (correctModuleId) {
+          this.logger.warn(`[searchStoresByModule] Category ${filters.category_id} belongs to module ${correctModuleId}, not ${filters.module_id}. Switching module context.`);
+          filters.module_id = correctModuleId;
+        } else {
+          this.logger.warn(`[searchStoresByModule] Category ${filters.category_id} does not exist in module ${filters.module_id}`);
+          throw new BadRequestException(
+            `Category ${filters.category_id} does not exist in module ${filters.module_id}`
+          );
+        }
       }
       this.logger.debug(`[searchStoresByModule] Category validation passed`);
     }

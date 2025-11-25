@@ -162,6 +162,17 @@ export class ModuleService {
   }
 
   /**
+   * Get module ID for a category
+   */
+  async getModuleIdForCategory(categoryId: number): Promise<number | null> {
+    const [rows] = await this.pool.query<mysql.RowDataPacket[]>(
+      'SELECT module_id FROM categories WHERE id = ?',
+      [categoryId]
+    );
+    return rows.length > 0 ? rows[0].module_id : null;
+  }
+
+  /**
    * Get category information
    */
   async getCategoryInfo(categoryId: number, moduleId?: number): Promise<any> {

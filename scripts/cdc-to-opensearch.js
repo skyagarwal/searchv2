@@ -80,7 +80,16 @@ function toDocFromItem(after) {
   if (doc.category_ids) {
     try {
       const val = typeof doc.category_ids === 'string' ? JSON.parse(doc.category_ids) : doc.category_ids;
-      doc.category_ids = Array.isArray(val) ? val.map(String) : [];
+      if (Array.isArray(val)) {
+        doc.category_ids = val.map(x => {
+          if (x && typeof x === 'object') {
+            return x.id !== undefined ? String(x.id) : null;
+          }
+          return String(x);
+        }).filter(Boolean);
+      } else {
+        doc.category_ids = [];
+      }
     } catch { doc.category_ids = []; }
   }
   // images normalization
