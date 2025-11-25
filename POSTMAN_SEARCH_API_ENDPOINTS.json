@@ -1,0 +1,585 @@
+{
+  "info": {
+    "name": "Mangwale Search API - Complete Endpoint Collection",
+    "description": "Search API for Food, E-commerce, Rooms, Services, and Movies with items search, stores search, suggestions, analytics, agent, and ASR endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3100",
+      "type": "string"
+    },
+    {
+      "key": "docs_url",
+      "value": "http://localhost:3100/docs",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Root Endpoint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""]
+            },
+            "description": "Landing endpoint listing commonly used routes for quick navigation"
+          },
+          "response": []
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Returns service health and OpenSearch cluster status"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Food Search",
+      "item": [
+        {
+          "name": "Search Food Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/food?q=pizza&veg=1&lat=19.9975&lon=73.7898&radius_km=5&page=1&size=20",
+              "host": ["{{base_url}}"],
+              "path": ["search", "food"],
+              "query": [
+                { "key": "q", "value": "pizza", "description": "Query text" },
+                { "key": "veg", "value": "1", "description": "Veg filter: 1=veg only, 0=non-veg only" },
+                { "key": "category_id", "value": "", "description": "Filter by category id" },
+                { "key": "price_min", "value": "", "description": "Minimum price" },
+                { "key": "price_max", "value": "", "description": "Maximum price" },
+                { "key": "rating_min", "value": "", "description": "Minimum rating (0-5)" },
+                { "key": "open_now", "value": "", "description": "If 1/true, prefer items currently open" },
+                { "key": "lat", "value": "19.9975", "description": "Latitude" },
+                { "key": "lon", "value": "73.7898", "description": "Longitude" },
+                { "key": "radius_km", "value": "5", "description": "Radius in kilometers" },
+                { "key": "page", "value": "1", "description": "Page number" },
+                { "key": "size", "value": "20", "description": "Page size (1-100)" },
+                { "key": "rerank", "value": "", "description": "If 1, apply heuristic re-ranking" }
+              ]
+            },
+            "description": "Full-text and faceted search over food items with tri-state veg filtering, price/rating, geo radius, and category facets"
+          },
+          "response": []
+        },
+        {
+          "name": "Food Category Search (Fast)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/food/category?category_id=288&lat=19.99176&lon=73.77388&radius_km=20&page=1&size=20&sort=distance&veg=1",
+              "host": ["{{base_url}}"],
+              "path": ["search", "food", "category"],
+              "query": [
+                { "key": "category_id", "value": "288", "description": "Category ID (required)", "disabled": false },
+                { "key": "lat", "value": "19.99176", "description": "Latitude for distance", "disabled": false },
+                { "key": "lon", "value": "73.77388", "description": "Longitude for distance", "disabled": false },
+                { "key": "radius_km", "value": "20", "description": "Radius filter", "disabled": false },
+                { "key": "page", "value": "1", "description": "Page number", "disabled": false },
+                { "key": "size", "value": "20", "description": "Items per page (max 50)", "disabled": false },
+                { "key": "sort", "value": "distance", "description": "Sort: distance, price_asc, price_desc, rating, popularity", "disabled": false },
+                { "key": "veg", "value": "1", "description": "Vegetarian filter", "disabled": false },
+                { "key": "price_min", "value": "", "description": "Minimum price", "disabled": true },
+                { "key": "price_max", "value": "", "description": "Maximum price", "disabled": true }
+              ]
+            },
+            "description": "Optimized endpoint for category-based browsing with fast loading and scroll pagination"
+          },
+          "response": []
+        },
+        {
+          "name": "Search Food Stores",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/food/stores?q=pizza&lat=19.9975&lon=73.7898&radius_km=5&delivery_time_max=30&page=1&size=20",
+              "host": ["{{base_url}}"],
+              "path": ["search", "food", "stores"],
+              "query": [
+                { "key": "q", "value": "pizza", "description": "Query text" },
+                { "key": "lat", "value": "19.9975", "description": "Latitude" },
+                { "key": "lon", "value": "73.7898", "description": "Longitude" },
+                { "key": "radius_km", "value": "5", "description": "Radius in kilometers" },
+                { "key": "delivery_time_max", "value": "30", "description": "Max delivery time in minutes" },
+                { "key": "page", "value": "1", "description": "Page number" },
+                { "key": "size", "value": "20", "description": "Page size" }
+              ]
+            },
+            "description": "Search and geo-sort food stores with optional delivery_time filter"
+          },
+          "response": []
+        },
+        {
+          "name": "Food Stores by Category (Fast)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/food/stores/category?category_id=288&lat=19.99176&lon=73.77388&radius_km=20&page=1&size=20&sort=distance&veg=1&delivery_time_max=30",
+              "host": ["{{base_url}}"],
+              "path": ["search", "food", "stores", "category"],
+              "query": [
+                { "key": "category_id", "value": "288", "description": "Category ID (required)", "disabled": false },
+                { "key": "lat", "value": "19.99176", "description": "Latitude", "disabled": false },
+                { "key": "lon", "value": "73.77388", "description": "Longitude", "disabled": false },
+                { "key": "radius_km", "value": "20", "description": "Radius filter", "disabled": false },
+                { "key": "page", "value": "1", "description": "Page number", "disabled": false },
+                { "key": "size", "value": "20", "description": "Stores per page (max 50)", "disabled": false },
+                { "key": "sort", "value": "distance", "description": "Sort: distance, rating, popularity, delivery_time", "disabled": false },
+                { "key": "veg", "value": "1", "description": "Vegetarian filter", "disabled": false },
+                { "key": "delivery_time_max", "value": "30", "description": "Max delivery time", "disabled": false }
+              ]
+            },
+            "description": "Find stores that serve items from a specific category"
+          },
+          "response": []
+        },
+        {
+          "name": "Suggest Food",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/food/suggest?q=pi&size=5&lat=19.9975&lon=73.7898",
+              "host": ["{{base_url}}"],
+              "path": ["search", "food", "suggest"],
+              "query": [
+                { "key": "q", "value": "pi", "description": "Query text (min 2 chars)", "disabled": false },
+                { "key": "size", "value": "5", "description": "Number of suggestions", "disabled": false },
+                { "key": "lat", "value": "19.9975", "description": "Latitude", "disabled": false },
+                { "key": "lon", "value": "73.7898", "description": "Longitude", "disabled": false }
+              ]
+            },
+            "description": "Typeahead suggestions across items, stores, and categories"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "E-commerce Search",
+      "item": [
+        {
+          "name": "Search E-commerce Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/ecom?q=milk&brand=amul,nestle&category_id=5002&price_min=50&price_max=500&lat=19.9975&lon=73.7898&radius_km=10&page=1&size=20",
+              "host": ["{{base_url}}"],
+              "path": ["search", "ecom"],
+              "query": [
+                { "key": "q", "value": "milk", "description": "Query text" },
+                { "key": "veg", "value": "", "description": "Veg filter" },
+                { "key": "brand", "value": "amul,nestle", "description": "Comma-separated brands" },
+                { "key": "category_id", "value": "5002", "description": "Category ID" },
+                { "key": "price_min", "value": "50", "description": "Min price" },
+                { "key": "price_max", "value": "500", "description": "Max price" },
+                { "key": "rating_min", "value": "", "description": "Min rating" },
+                { "key": "lat", "value": "19.9975", "description": "Latitude" },
+                { "key": "lon", "value": "73.7898", "description": "Longitude" },
+                { "key": "radius_km", "value": "10", "description": "Radius" },
+                { "key": "page", "value": "1", "description": "Page" },
+                { "key": "size", "value": "20", "description": "Size" },
+                { "key": "rerank", "value": "", "description": "Rerank" }
+              ]
+            },
+            "description": "Full-text search over e-commerce items with brand and category facets"
+          },
+          "response": []
+        },
+        {
+          "name": "E-commerce Category Search (Fast)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/ecom/category?category_id=5002&lat=19.99176&lon=73.77388&radius_km=20&page=1&size=20&sort=distance&veg=1&brand=amul,nestle&price_min=50&price_max=500",
+              "host": ["{{base_url}}"],
+              "path": ["search", "ecom", "category"],
+              "query": [
+                { "key": "category_id", "value": "5002", "description": "Category ID (required)", "disabled": false },
+                { "key": "lat", "value": "19.99176", "description": "Latitude", "disabled": false },
+                { "key": "lon", "value": "73.77388", "description": "Longitude", "disabled": false },
+                { "key": "radius_km", "value": "20", "description": "Radius", "disabled": false },
+                { "key": "page", "value": "1", "description": "Page", "disabled": false },
+                { "key": "size", "value": "20", "description": "Items per page", "disabled": false },
+                { "key": "sort", "value": "distance", "description": "Sort order", "disabled": false },
+                { "key": "veg", "value": "1", "description": "Veg filter", "disabled": false },
+                { "key": "brand", "value": "amul,nestle", "description": "Brand filter", "disabled": false },
+                { "key": "price_min", "value": "50", "description": "Min price", "disabled": false },
+                { "key": "price_max", "value": "500", "description": "Max price", "disabled": false }
+              ]
+            },
+            "description": "Optimized e-commerce category search"
+          },
+          "response": []
+        },
+        {
+          "name": "Search E-commerce Stores",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/ecom/stores?q=grocery&lat=19.9975&lon=73.7898&radius_km=10&page=1&size=20",
+              "host": ["{{base_url}}"],
+              "path": ["search", "ecom", "stores"],
+              "query": [
+                { "key": "q", "value": "grocery", "description": "Query text" },
+                { "key": "lat", "value": "19.9975", "description": "Latitude" },
+                { "key": "lon", "value": "73.7898", "description": "Longitude" },
+                { "key": "radius_km", "value": "10", "description": "Radius" },
+                { "key": "page", "value": "1", "description": "Page" },
+                { "key": "size", "value": "20", "description": "Size" }
+              ]
+            },
+            "description": "Search and geo-sort e-commerce stores"
+          },
+          "response": []
+        },
+        {
+          "name": "E-commerce Stores by Category (Fast)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/ecom/stores/category?category_id=5002&lat=19.99176&lon=73.77388&radius_km=20&page=1&size=20&sort=distance&veg=1&brand=amul,nestle",
+              "host": ["{{base_url}}"],
+              "path": ["search", "ecom", "stores", "category"],
+              "query": [
+                { "key": "category_id", "value": "5002", "description": "Category ID (required)", "disabled": false },
+                { "key": "lat", "value": "19.99176", "description": "Latitude", "disabled": false },
+                { "key": "lon", "value": "73.77388", "description": "Longitude", "disabled": false },
+                { "key": "radius_km", "value": "20", "description": "Radius", "disabled": false },
+                { "key": "page", "value": "1", "description": "Page", "disabled": false },
+                { "key": "size", "value": "20", "description": "Stores per page", "disabled": false },
+                { "key": "sort", "value": "distance", "description": "Sort order", "disabled": false },
+                { "key": "veg", "value": "1", "description": "Veg filter", "disabled": false },
+                { "key": "brand", "value": "amul,nestle", "description": "Brand filter", "disabled": false }
+              ]
+            },
+            "description": "Find e-commerce stores selling items from a specific category"
+          },
+          "response": []
+        },
+        {
+          "name": "Suggest E-commerce",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/ecom/suggest?q=mi&size=5",
+              "host": ["{{base_url}}"],
+              "path": ["search", "ecom", "suggest"],
+              "query": [
+                { "key": "q", "value": "mi", "description": "Query (min 2 chars)", "disabled": false },
+                { "key": "size", "value": "5", "description": "Number of suggestions", "disabled": false }
+              ]
+            },
+            "description": "Typeahead suggestions for e-commerce"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Rooms Search",
+      "item": [
+        {
+          "name": "Search Rooms",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/rooms?q=deluxe&lat=19.9975&lon=73.7898&radius_km=10&page=1&size=20",
+              "host": ["{{base_url}}"],
+              "path": ["search", "rooms"],
+              "query": [
+                { "key": "q", "value": "deluxe", "description": "Query text" },
+                { "key": "lat", "value": "19.9975", "description": "Latitude" },
+                { "key": "lon", "value": "73.7898", "description": "Longitude" },
+                { "key": "radius_km", "value": "10", "description": "Radius" },
+                { "key": "page", "value": "1", "description": "Page" },
+                { "key": "size", "value": "20", "description": "Size" }
+              ]
+            },
+            "description": "Search rooms/accommodation listings"
+          },
+          "response": []
+        },
+        {
+          "name": "Search Room Providers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/rooms/stores?q=hotel&lat=19.9975&lon=73.7898&radius_km=5",
+              "host": ["{{base_url}}"],
+              "path": ["search", "rooms", "stores"],
+              "query": [
+                { "key": "q", "value": "hotel", "description": "Query text" },
+                { "key": "lat", "value": "19.9975", "description": "Latitude" },
+                { "key": "lon", "value": "73.7898", "description": "Longitude" },
+                { "key": "radius_km", "value": "5", "description": "Radius" }
+              ]
+            },
+            "description": "Search hotel/property providers with geo sorting"
+          },
+          "response": []
+        },
+        {
+          "name": "Suggest Rooms",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/rooms/suggest?q=de&size=5",
+              "host": ["{{base_url}}"],
+              "path": ["search", "rooms", "suggest"],
+              "query": [
+                { "key": "q", "value": "de", "description": "Query (min 2 chars)", "disabled": false },
+                { "key": "size", "value": "5", "description": "Number of suggestions", "disabled": false }
+              ]
+            },
+            "description": "Typeahead suggestions for rooms and providers"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Movies Search",
+      "item": [
+        {
+          "name": "Search Movies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/movies?q=action&genre=Action&page=1&size=20",
+              "host": ["{{base_url}}"],
+              "path": ["search", "movies"],
+              "query": [
+                { "key": "q", "value": "action", "description": "Query text" },
+                { "key": "genre", "value": "Action", "description": "Genre filter" },
+                { "key": "page", "value": "1", "description": "Page" },
+                { "key": "size", "value": "20", "description": "Size" }
+              ]
+            },
+            "description": "Search movies catalog by title/genre/cast"
+          },
+          "response": []
+        },
+        {
+          "name": "Search Movie Theaters",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/movies/stores?q=PVR&lat=19.9975&lon=73.7898&radius_km=10",
+              "host": ["{{base_url}}"],
+              "path": ["search", "movies", "stores"],
+              "query": [
+                { "key": "q", "value": "PVR", "description": "Query text" },
+                { "key": "lat", "value": "19.9975", "description": "Latitude" },
+                { "key": "lon", "value": "73.7898", "description": "Longitude" },
+                { "key": "radius_km", "value": "10", "description": "Radius" }
+              ]
+            },
+            "description": "Search movie theaters/showtimes with geo sort"
+          },
+          "response": []
+        },
+        {
+          "name": "Suggest Movies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/movies/suggest?q=av&size=5",
+              "host": ["{{base_url}}"],
+              "path": ["search", "movies", "suggest"],
+              "query": [
+                { "key": "q", "value": "av", "description": "Query (min 2 chars)", "disabled": false },
+                { "key": "size", "value": "5", "description": "Number of suggestions", "disabled": false }
+              ]
+            },
+            "description": "Typeahead suggestions for movies (titles/genres/cast)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Services Search",
+      "item": [
+        {
+          "name": "Search Services",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/services?q=spa&category=Beauty&price_min=500&price_max=2000&rating_min=4&lat=19.9975&lon=73.7898&radius_km=10&page=1&size=20",
+              "host": ["{{base_url}}"],
+              "path": ["search", "services"],
+              "query": [
+                { "key": "q", "value": "spa", "description": "Query text" },
+                { "key": "category", "value": "Beauty", "description": "Service category" },
+                { "key": "price_min", "value": "500", "description": "Min base_price" },
+                { "key": "price_max", "value": "2000", "description": "Max base_price" },
+                { "key": "rating_min", "value": "4", "description": "Min rating" },
+                { "key": "lat", "value": "19.9975", "description": "Latitude" },
+                { "key": "lon", "value": "73.7898", "description": "Longitude" },
+                { "key": "radius_km", "value": "10", "description": "Radius" },
+                { "key": "page", "value": "1", "description": "Page" },
+                { "key": "size", "value": "20", "description": "Size" }
+              ]
+            },
+            "description": "Search local services with category and price filters"
+          },
+          "response": []
+        },
+        {
+          "name": "Search Service Providers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/services/stores?q=salon&lat=19.9975&lon=73.7898&radius_km=10",
+              "host": ["{{base_url}}"],
+              "path": ["search", "services", "stores"],
+              "query": [
+                { "key": "q", "value": "salon", "description": "Query text" },
+                { "key": "lat", "value": "19.9975", "description": "Latitude" },
+                { "key": "lon", "value": "73.7898", "description": "Longitude" },
+                { "key": "radius_km", "value": "10", "description": "Radius" }
+              ]
+            },
+            "description": "Search and geo-sort service providers"
+          },
+          "response": []
+        },
+        {
+          "name": "Suggest Services",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/services/suggest?q=sp&size=5",
+              "host": ["{{base_url}}"],
+              "path": ["search", "services", "suggest"],
+              "query": [
+                { "key": "q", "value": "sp", "description": "Query (min 2 chars)", "disabled": false },
+                { "key": "size", "value": "5", "description": "Number of suggestions", "disabled": false }
+              ]
+            },
+            "description": "Typeahead suggestions for services"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Trending Queries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/analytics/trending?window=7d&module=food&time_of_day=evening",
+              "host": ["{{base_url}}"],
+              "path": ["analytics", "trending"],
+              "query": [
+                { "key": "window", "value": "7d", "description": "Time window (e.g., 7d)" },
+                { "key": "module", "value": "food", "description": "Module filter" },
+                { "key": "time_of_day", "value": "evening", "description": "Time of day bucket" }
+              ]
+            },
+            "description": "Top queries aggregated from search events in ClickHouse"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Natural Language Agent",
+      "item": [
+        {
+          "name": "Search Agent",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/agent?q=veg pizza near me open now under 300&lat=19.9975&lon=73.7898&radius_km=5",
+              "host": ["{{base_url}}"],
+              "path": ["search", "agent"],
+              "query": [
+                { "key": "q", "value": "veg pizza near me open now under 300", "description": "Free-form query" },
+                { "key": "lat", "value": "19.9975", "description": "Latitude" },
+                { "key": "lon", "value": "73.7898", "description": "Longitude" },
+                { "key": "radius_km", "value": "5", "description": "Radius" }
+              ]
+            },
+            "description": "Natural-language search agent with progressive relaxation"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "ASR (Speech Recognition)",
+      "item": [
+        {
+          "name": "ASR Transcription",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "audio",
+                  "type": "file",
+                  "src": [],
+                  "description": "Audio file (WAV, MP3, etc.)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/search/asr",
+              "host": ["{{base_url}}"],
+              "path": ["search", "asr"]
+            },
+            "description": "Speech-to-text transcription via Admin AI ASR"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

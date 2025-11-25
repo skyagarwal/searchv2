@@ -1,0 +1,29 @@
+version: "3.8"
+
+# Override file to connect to existing Mangwale infrastructure
+# Use: docker-compose -f docker-compose.production.yml -f docker-compose.override.yml up
+
+services:
+  # Comment out redis since we're using mangwale_redis
+  redis:
+    container_name: search-redis-disabled
+    entrypoint: ["/bin/true"]
+    restart: "no"
+    profiles:
+      - disabled
+
+  search-api:
+    depends_on:
+      - mysql
+      - redpanda
+      - opensearch
+    environment:
+      - REDIS_URL=redis://172.17.0.1:6379/2
+    extra_hosts:
+      - "redis:172.17.0.1"
+    networks:
+      - mangwale_unified_network
+
+networks:
+  mangwale_unified_network:
+    external: true

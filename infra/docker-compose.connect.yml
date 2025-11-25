@@ -1,0 +1,86 @@
+version: "3.8"
+
+services:
+  search-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: search-api
+    environment:
+      - NODE_ENV=production
+      - PORT=3100
+      - OPENSEARCH_HOST=http://mangwale_opensearch:9200
+      - REDIS_URL=redis://mangwale_redis:6379/2
+      - ENABLE_SEARCH_CACHE=true
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=mangwale
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=secret
+      - KAFKA_BROKERS=redpanda:9092
+      - CLICKHOUSE_URL=http://mangwale_clickhouse:8123
+      - CLICKHOUSE_HOST=http://mangwale_clickhouse:8123
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=clickhouse123
+      - EMBEDDING_SERVICE_URL=http://embedding-service:3101
+    ports:
+      - "3100:3100"
+    networks:
+      - search_default
+      - mangwale_unified_network
+      - traefik_proxy
+    restart: unless-stopped
+
+  traefik:
+    image: traefik:v2.10
+    container_name: search-traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=devops@mangwale.ai"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8090:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik-config/dynamic:/etc/traefik/dynamic
+      - ./letsencrypt:/letsencrypt
+    networks:
+      - traefik_proxy
+    restart: unless-stopped
+
+  search-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: search-frontend
+    depends_on:
+      - search-api
+    ports:
+      - "6000:80"
+    networks:
+      - search_default
+      - traefik_proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.search-frontend.rule=Host(`search.test.mangwale.ai`)"
+      - "traefik.http.routers.search-frontend.entrypoints=web,websecure"
+      - "traefik.http.routers.search-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.search-frontend.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+networks:
+  search_default:
+    external: true
+  mangwale_unified_network:
+    external: true
+  traefik_proxy:
+    external: true
+    name: mangwaleai_traefik_proxy

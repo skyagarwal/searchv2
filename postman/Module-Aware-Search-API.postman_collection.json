@@ -1,0 +1,594 @@
+{
+  "info": {
+    "name": "Module-Aware Search API",
+    "description": "Comprehensive Postman collection for testing the Module-Aware Search API\n\nIncludes examples for:\n- Unified search with module filtering\n- Module-specific searches\n- Global search across all modules\n- Semantic/vector search\n- Category browsing\n- Suggestions and autocomplete\n- AI agent search\n\nBase URL: http://localhost:3100\nVersion: 2.0.0\nDate: November 10, 2025",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "12345"
+  },
+  "item": [
+    {
+      "name": "1. Unified Search",
+      "item": [
+        {
+          "name": "Search Specific Module (Food)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search?q=pizza&module_id=4&lat=19.9975&lon=73.7898&sort=distance",
+              "host": ["{{baseUrl}}"],
+              "path": ["search"],
+              "query": [
+                { "key": "q", "value": "pizza", "description": "Search query" },
+                { "key": "module_id", "value": "4", "description": "Food module" },
+                { "key": "lat", "value": "19.9975", "description": "User latitude" },
+                { "key": "lon", "value": "73.7898", "description": "User longitude" },
+                { "key": "sort", "value": "distance", "description": "Sort by distance" }
+              ]
+            },
+            "description": "Search for pizza in Food module (ID 4), sorted by distance from user location."
+          }
+        },
+        {
+          "name": "Search Multiple Modules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search?q=healthy&module_ids=4,5,13",
+              "host": ["{{baseUrl}}"],
+              "path": ["search"],
+              "query": [
+                { "key": "q", "value": "healthy" },
+                { "key": "module_ids", "value": "4,5,13", "description": "Food, Shop, Pet Care modules" }
+              ]
+            },
+            "description": "Search for 'healthy' across Food, Shop, and Pet Care modules."
+          }
+        },
+        {
+          "name": "Search Module Type (All Food Modules)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search?q=biryani&module_type=food",
+              "host": ["{{baseUrl}}"],
+              "path": ["search"],
+              "query": [
+                { "key": "q", "value": "biryani" },
+                { "key": "module_type", "value": "food", "description": "Search all food-type modules" }
+              ]
+            },
+            "description": "Search for biryani across all food-type modules."
+          }
+        },
+        {
+          "name": "Search All Modules (Global)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search?q=chicken",
+              "host": ["{{baseUrl}}"],
+              "path": ["search"],
+              "query": [
+                { "key": "q", "value": "chicken", "description": "Search all active modules" }
+              ]
+            },
+            "description": "Global search for 'chicken' across all active modules."
+          }
+        },
+        {
+          "name": "Search with Filters (Veg + Price)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search?q=pizza&module_id=4&veg=true&price_min=100&price_max=500&rating_min=4",
+              "host": ["{{baseUrl}}"],
+              "path": ["search"],
+              "query": [
+                { "key": "q", "value": "pizza" },
+                { "key": "module_id", "value": "4" },
+                { "key": "veg", "value": "true", "description": "Vegetarian only" },
+                { "key": "price_min", "value": "100" },
+                { "key": "price_max", "value": "500" },
+                { "key": "rating_min", "value": "4", "description": "Min 4-star rating" }
+              ]
+            },
+            "description": "Search vegetarian pizza between ₹100-500 with min 4-star rating."
+          }
+        },
+        {
+          "name": "Search with Pagination",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search?q=biryani&module_id=4&page=2&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["search"],
+              "query": [
+                { "key": "q", "value": "biryani" },
+                { "key": "module_id", "value": "4" },
+                { "key": "page", "value": "2", "description": "Page 2" },
+                { "key": "size", "value": "10", "description": "10 results per page" }
+              ]
+            },
+            "description": "Get page 2 of biryani results with 10 items per page."
+          }
+        }
+      ],
+      "description": "Main unified search endpoint with flexible module filtering"
+    },
+    {
+      "name": "2. Module-Specific Search",
+      "item": [
+        {
+          "name": "Food Module Search",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/food?q=biryani&lat=19.9975&lon=73.7898&veg=false",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "food"],
+              "query": [
+                { "key": "q", "value": "biryani" },
+                { "key": "lat", "value": "19.9975" },
+                { "key": "lon", "value": "73.7898" },
+                { "key": "veg", "value": "false" }
+              ]
+            },
+            "description": "Search food modules for biryani near user location."
+          }
+        },
+        {
+          "name": "Ecommerce Module Search (All)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/ecom?q=milk",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "ecom"],
+              "query": [
+                { "key": "q", "value": "milk" }
+              ]
+            },
+            "description": "Search all ecommerce modules (Shop + Pet Care) for milk."
+          }
+        },
+        {
+          "name": "Ecommerce - Shop Module Only",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/ecom?q=toys&module_id=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "ecom"],
+              "query": [
+                { "key": "q", "value": "toys" },
+                { "key": "module_id", "value": "5", "description": "Shop module only" }
+              ]
+            },
+            "description": "Search only Shop module (5) for toys."
+          }
+        },
+        {
+          "name": "Ecommerce - Pet Care Module Only",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/ecom?q=dog+food&module_id=13",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "ecom"],
+              "query": [
+                { "key": "q", "value": "dog food" },
+                { "key": "module_id", "value": "13", "description": "Pet Care module only" }
+              ]
+            },
+            "description": "Search only Pet Care module (13) for dog food."
+          }
+        }
+      ],
+      "description": "Backward compatible module-type based search endpoints"
+    },
+    {
+      "name": "3. Global Search",
+      "item": [
+        {
+          "name": "Search All Modules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/all?q=chicken&lat=19.9975&lon=73.7898",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "all"],
+              "query": [
+                { "key": "q", "value": "chicken" },
+                { "key": "lat", "value": "19.9975" },
+                { "key": "lon", "value": "73.7898" }
+              ]
+            },
+            "description": "Search for 'chicken' across ALL active modules with location context."
+          }
+        },
+        {
+          "name": "Global Search with Pagination",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/all?q=healthy&page=1&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "all"],
+              "query": [
+                { "key": "q", "value": "healthy" },
+                { "key": "page", "value": "1" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Global search with grouped results by module."
+          }
+        }
+      ],
+      "description": "Search across all active modules with grouped results"
+    },
+    {
+      "name": "4. Semantic Search",
+      "item": [
+        {
+          "name": "Semantic Search - Single Module",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/semantic?q=healthy+breakfast+options&module_id=4&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "semantic"],
+              "query": [
+                { "key": "q", "value": "healthy breakfast options" },
+                { "key": "module_id", "value": "4", "description": "Food module" },
+                { "key": "size", "value": "10" }
+              ]
+            },
+            "description": "AI-powered semantic search for healthy breakfast in Food module."
+          }
+        },
+        {
+          "name": "Semantic Search - Multiple Modules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/semantic?q=nutritious+food+for+dogs&module_ids=4,13",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "semantic"],
+              "query": [
+                { "key": "q", "value": "nutritious food for dogs" },
+                { "key": "module_ids", "value": "4,13", "description": "Food + Pet Care" }
+              ]
+            },
+            "description": "Cross-module semantic search for dog food."
+          }
+        },
+        {
+          "name": "Semantic Search - All Food Modules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/semantic?q=spicy+dishes&module_type=food",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "semantic"],
+              "query": [
+                { "key": "q", "value": "spicy dishes" },
+                { "key": "module_type", "value": "food" }
+              ]
+            },
+            "description": "Semantic search across all food-type modules."
+          }
+        },
+        {
+          "name": "Semantic Search via Unified Endpoint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search?q=quick+breakfast&module_ids=4,5&semantic=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["search"],
+              "query": [
+                { "key": "q", "value": "quick breakfast" },
+                { "key": "module_ids", "value": "4,5" },
+                { "key": "semantic", "value": "true", "description": "Enable vector search" }
+              ]
+            },
+            "description": "Use semantic search via main unified endpoint."
+          }
+        }
+      ],
+      "description": "AI-powered vector similarity search"
+    },
+    {
+      "name": "5. Category Search",
+      "item": [
+        {
+          "name": "Browse Category (With Module)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/category?module_id=4&category_id=288&lat=19.9975&lon=73.7898",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "category"],
+              "query": [
+                { "key": "module_id", "value": "4", "description": "REQUIRED - Food module" },
+                { "key": "category_id", "value": "288", "description": "Category ID" },
+                { "key": "lat", "value": "19.9975" },
+                { "key": "lon", "value": "73.7898" }
+              ]
+            },
+            "description": "Browse category 288 in Food module. Module ID is REQUIRED."
+          }
+        },
+        {
+          "name": "Category with Zone Filter",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/category?module_id=4&category_id=288&zone_id=4&veg=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "category"],
+              "query": [
+                { "key": "module_id", "value": "4" },
+                { "key": "category_id", "value": "288" },
+                { "key": "zone_id", "value": "4", "description": "Filter by zone" },
+                { "key": "veg", "value": "true" }
+              ]
+            },
+            "description": "Browse category with zone and vegetarian filters."
+          }
+        },
+        {
+          "name": "Food Category (Legacy Endpoint)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/food/category?module_id=4&category_id=288",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "food", "category"],
+              "query": [
+                { "key": "module_id", "value": "4" },
+                { "key": "category_id", "value": "288" }
+              ]
+            },
+            "description": "Backward compatible food category endpoint."
+          }
+        },
+        {
+          "name": "Ecom Category (Legacy Endpoint)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/ecom/category?module_id=5&category_id=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "ecom", "category"],
+              "query": [
+                { "key": "module_id", "value": "5" },
+                { "key": "category_id", "value": "25" }
+              ]
+            },
+            "description": "Browse Shop module category."
+          }
+        }
+      ],
+      "description": "Module-aware category browsing (category_id requires module context)"
+    },
+    {
+      "name": "6. Suggestions & Autocomplete",
+      "item": [
+        {
+          "name": "Suggest - Specific Module",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/suggest?q=chi&module_id=4&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "suggest"],
+              "query": [
+                { "key": "q", "value": "chi", "description": "Partial query (min 2 chars)" },
+                { "key": "module_id", "value": "4", "description": "Food module" },
+                { "key": "size", "value": "10" }
+              ]
+            },
+            "description": "Get suggestions for 'chi' in Food module."
+          }
+        },
+        {
+          "name": "Suggest - Multiple Modules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/suggest?q=dog&module_ids=4,13",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "suggest"],
+              "query": [
+                { "key": "q", "value": "dog" },
+                { "key": "module_ids", "value": "4,13", "description": "Food + Pet Care" }
+              ]
+            },
+            "description": "Get suggestions across Food and Pet Care modules."
+          }
+        },
+        {
+          "name": "Suggest - Global (All Modules)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/suggest/all?q=hea&size=15",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "suggest", "all"],
+              "query": [
+                { "key": "q", "value": "hea" },
+                { "key": "size", "value": "15" }
+              ]
+            },
+            "description": "Global suggestions across all modules."
+          }
+        },
+        {
+          "name": "Food Suggest (Legacy)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/food/suggest?q=piz&module_id=4",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "food", "suggest"],
+              "query": [
+                { "key": "q", "value": "piz" },
+                { "key": "module_id", "value": "4" }
+              ]
+            },
+            "description": "Food module suggestions (backward compatible)."
+          }
+        }
+      ],
+      "description": "Autocomplete suggestions with module context"
+    },
+    {
+      "name": "7. AI Agent Search",
+      "item": [
+        {
+          "name": "AI Agent - Simple Query",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/agent?q=show+me+pizza+near+me&lat=19.9975&lon=73.7898",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "agent"],
+              "query": [
+                { "key": "q", "value": "show me pizza near me" },
+                { "key": "lat", "value": "19.9975" },
+                { "key": "lon", "value": "73.7898" }
+              ]
+            },
+            "description": "Natural language query - AI will infer Food module."
+          }
+        },
+        {
+          "name": "AI Agent - Ambiguous Query",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/agent?q=I+need+milk",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "agent"],
+              "query": [
+                { "key": "q", "value": "I need milk" }
+              ]
+            },
+            "description": "Ambiguous query - AI may ask clarification (Food vs Shop)."
+          }
+        },
+        {
+          "name": "AI Agent - Complex Query",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/agent?q=healthy+breakfast+options+for+busy+mornings&zone_id=4",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "agent"],
+              "query": [
+                { "key": "q", "value": "healthy breakfast options for busy mornings" },
+                { "key": "zone_id", "value": "4" }
+              ]
+            },
+            "description": "Complex natural language query with context."
+          }
+        },
+        {
+          "name": "AI Agent - With Context",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/agent?q=show+me+the+best+rated+ones&context=prev_search_123",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "agent"],
+              "query": [
+                { "key": "q", "value": "show me the best rated ones" },
+                { "key": "context", "value": "prev_search_123", "description": "Previous conversation context" }
+              ]
+            },
+            "description": "Follow-up query using conversation context."
+          }
+        }
+      ],
+      "description": "Natural language search with intelligent module selection"
+    },
+    {
+      "name": "8. Analytics & Health",
+      "item": [
+        {
+          "name": "API Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Check API health status."
+          }
+        },
+        {
+          "name": "Trending Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/trending?module_id=4&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "trending"],
+              "query": [
+                { "key": "module_id", "value": "4" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Get trending items for Food module."
+          }
+        }
+      ],
+      "description": "API health and analytics endpoints"
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3100",
+      "type": "string"
+    },
+    {
+      "key": "productionUrl",
+      "value": "https://search.mangwale.com",
+      "type": "string"
+    }
+  ]
+}

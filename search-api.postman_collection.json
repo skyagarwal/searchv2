@@ -1,0 +1,517 @@
+{
+	"info": {
+		"_postman_id": "search-api-collection",
+		"name": "Search API",
+		"description": "Collection for Search API endpoints including Module ID based search (v2), Legacy module endpoints, and Analytics.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "General",
+			"item": [
+				{
+					"name": "Root",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								""
+							]
+						}
+					}
+				},
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "v2 (Module ID Based - Recommended)",
+			"item": [
+				{
+					"name": "Search Items",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v2/search/items?q=paneer&module_id=4&veg=1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "paneer",
+									"description": "Search query"
+								},
+								{
+									"key": "module_id",
+									"value": "4",
+									"description": "Module ID (e.g., 4 for Food)"
+								},
+								{
+									"key": "veg",
+									"value": "1",
+									"description": "1 for Veg, 0 for Non-Veg"
+								},
+								{
+									"key": "store_id",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "category_id",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "lat",
+									"value": "19.9975",
+									"disabled": true
+								},
+								{
+									"key": "lon",
+									"value": "73.7898",
+									"disabled": true
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Search Stores",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v2/search/stores?q=pizza&module_id=4&lat=19.9975&lon=73.7898",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"stores"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "pizza"
+								},
+								{
+									"key": "module_id",
+									"value": "4"
+								},
+								{
+									"key": "lat",
+									"value": "19.9975"
+								},
+								{
+									"key": "lon",
+									"value": "73.7898"
+								},
+								{
+									"key": "radius_km",
+									"value": "5",
+									"disabled": true
+								},
+								{
+									"key": "category_id",
+									"value": "",
+									"disabled": true
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Suggest",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/v2/search/suggest?q=pa&module_id=4",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"suggest"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "pa"
+								},
+								{
+									"key": "module_id",
+									"value": "4"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Unified Search",
+			"item": [
+				{
+					"name": "Unified Search",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/search?q=milk&module_ids=4,5",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"search"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "milk"
+								},
+								{
+									"key": "module_ids",
+									"value": "4,5",
+									"description": "Comma separated module IDs"
+								},
+								{
+									"key": "veg",
+									"value": "1",
+									"disabled": true
+								},
+								{
+									"key": "semantic",
+									"value": "1",
+									"disabled": true
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Agent Search",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/search/agent?q=go to ganesh sweets and order paneer",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"search",
+								"agent"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "go to ganesh sweets and order paneer"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Recommendations",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/search/recommendations/:itemId?module_id=4",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"search",
+								"recommendations",
+								":itemId"
+							],
+							"query": [
+								{
+									"key": "module_id",
+									"value": "4"
+								},
+								{
+									"key": "store_id",
+									"value": "",
+									"disabled": true
+								}
+							],
+							"variable": [
+								{
+									"key": "itemId",
+									"value": "123"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Food (Legacy)",
+			"item": [
+				{
+					"name": "Search Food Items",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/search/food?q=pizza&veg=1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"search",
+								"food"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "pizza"
+								},
+								{
+									"key": "veg",
+									"value": "1"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Search Food Stores",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/search/food/stores?lat=19.9975&lon=73.7898",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"search",
+								"food",
+								"stores"
+							],
+							"query": [
+								{
+									"key": "lat",
+									"value": "19.9975"
+								},
+								{
+									"key": "lon",
+									"value": "73.7898"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Food Category Browse",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/search/food/category?category_id=288",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"search",
+								"food",
+								"category"
+							],
+							"query": [
+								{
+									"key": "category_id",
+									"value": "288"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Semantic Food Search",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/search/semantic/food?q=spicy chicken",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"search",
+								"semantic",
+								"food"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "spicy chicken"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "E-commerce (Legacy)",
+			"item": [
+				{
+					"name": "Search Ecom Items",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/search/ecom?q=milk",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"search",
+								"ecom"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "milk"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Search Ecom Stores",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/search/ecom/stores?lat=19.9975&lon=73.7898",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"search",
+								"ecom",
+								"stores"
+							],
+							"query": [
+								{
+									"key": "lat",
+									"value": "19.9975"
+								},
+								{
+									"key": "lon",
+									"value": "73.7898"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Analytics",
+			"item": [
+				{
+					"name": "Trending Queries",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/analytics/trending?window=7d",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"analytics",
+								"trending"
+							],
+							"query": [
+								{
+									"key": "window",
+									"value": "7d"
+								},
+								{
+									"key": "module",
+									"value": "food",
+									"disabled": true
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "ASR",
+			"item": [
+				{
+					"name": "Transcribe Audio",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "audio",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/search/asr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"search",
+								"asr"
+							]
+						}
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3100",
+			"type": "string"
+		}
+	]
+}

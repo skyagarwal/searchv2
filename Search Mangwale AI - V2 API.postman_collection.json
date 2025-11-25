@@ -1,0 +1,946 @@
+{
+	"info": {
+		"_postman_id": "0490ec3d-d99a-406b-b95a-0cfe7c261c1c",
+		"name": "Search Mangwale AI - V2 API",
+		"description": "Postman collection for Search Mangwale AI V2 endpoints with module_id, store_id, and category_id support",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "43040121",
+		"_collection_link": "https://gold-shadow-790474.postman.co/workspace/My-Workspace~cd106445-c08f-498a-8f2f-ea9cb89a8fee/collection/43040121-0490ec3d-d99a-406b-b95a-0cfe7c261c1c?action=share&source=collection_link&creator=43040121"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "V2 Search - Suggest",
+			"item": [
+				{
+					"name": "Suggest - Module ID Only",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/suggest?q=misal&module_id=4",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"suggest"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "misal"
+								},
+								{
+									"key": "module_id",
+									"value": "4"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Suggest - Module ID + Store ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/suggest?q=misal&module_id=4&store_id=123",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"suggest"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "misal"
+								},
+								{
+									"key": "module_id",
+									"value": "4"
+								},
+								{
+									"key": "store_id",
+									"value": "123"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Suggest - Module ID + Category ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/suggest?q=misal&module_id=4&category_id=288",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"suggest"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "misal"
+								},
+								{
+									"key": "module_id",
+									"value": "4"
+								},
+								{
+									"key": "category_id",
+									"value": "288"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Suggest - All Modules (No Module ID)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/suggest?q=pizza&size=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"suggest"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "pizza"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Suggest - With Geo Location",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/suggest?q=misal&module_id=4&lat=19.9975&lon=73.7898",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"suggest"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "misal"
+								},
+								{
+									"key": "module_id",
+									"value": "4"
+								},
+								{
+									"key": "lat",
+									"value": "19.9975"
+								},
+								{
+									"key": "lon",
+									"value": "73.7898"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "V2 Search - Items",
+			"item": [
+				{
+					"name": "Items - Module ID Only",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=misal&module_id=4",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "misal"
+								},
+								{
+									"key": "module_id",
+									"value": "4"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Items - Store Name Fallback (Sadhana Chulivarchi Misal)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=Sadhana Chulivarchi Misal&module_id=4",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "Sadhana Chulivarchi Misal"
+								},
+								{
+									"key": "module_id",
+									"value": "4"
+								}
+							]
+						},
+						"description": "This should find stores matching 'Sadhana Chulivarchi Misal' and return items from those stores if no direct item matches found"
+					},
+					"response": []
+				},
+				{
+					"name": "Items - Module ID + Store ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=pizza&module_id=4&store_id=123",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "pizza"
+								},
+								{
+									"key": "module_id",
+									"value": "4"
+								},
+								{
+									"key": "store_id",
+									"value": "123"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Items - Module ID + Category ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=pizza&module_id=4&category_id=288",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "pizza"
+								},
+								{
+									"key": "module_id",
+									"value": "4"
+								},
+								{
+									"key": "category_id",
+									"value": "288"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Items - All Filters Combined",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=pizza&module_id=4&store_id=123&category_id=288&veg=1&price_min=100&price_max=500&rating_min=4",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "pizza"
+								},
+								{
+									"key": "module_id",
+									"value": "4"
+								},
+								{
+									"key": "store_id",
+									"value": "123"
+								},
+								{
+									"key": "category_id",
+									"value": "288"
+								},
+								{
+									"key": "veg",
+									"value": "1"
+								},
+								{
+									"key": "price_min",
+									"value": "100"
+								},
+								{
+									"key": "price_max",
+									"value": "500"
+								},
+								{
+									"key": "rating_min",
+									"value": "4"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Items - Semantic Search",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=spicy chicken dish&module_id=4&semantic=1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "spicy chicken dish"
+								},
+								{
+									"key": "module_id",
+									"value": "4"
+								},
+								{
+									"key": "semantic",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Items - With Geo Location",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=pizza&module_id=4&lat=19.9975&lon=73.7898&radius_km=5&sort=distance",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "pizza"
+								},
+								{
+									"key": "module_id",
+									"value": "4"
+								},
+								{
+									"key": "lat",
+									"value": "19.9975"
+								},
+								{
+									"key": "lon",
+									"value": "73.7898"
+								},
+								{
+									"key": "radius_km",
+									"value": "5"
+								},
+								{
+									"key": "sort",
+									"value": "distance"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Items - Pagination",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=pizza&module_id=4&page=2&size=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "pizza"
+								},
+								{
+									"key": "module_id",
+									"value": "4"
+								},
+								{
+									"key": "page",
+									"value": "2"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Items - All Modules (No Module ID)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=pizza",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "pizza"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Items - No Query (Popular Items)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?module_id=4&sort=popularity",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "module_id",
+									"value": "4"
+								},
+								{
+									"key": "sort",
+									"value": "popularity"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "V2 Search - Stores",
+			"item": [
+				{
+					"name": "Stores - Module ID Only",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/stores?q=misal&module_id=4",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"stores"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "misal"
+								},
+								{
+									"key": "module_id",
+									"value": "4"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Stores - Module ID + Category ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/stores?q=misal&module_id=4&category_id=288",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"stores"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "misal"
+								},
+								{
+									"key": "module_id",
+									"value": "4"
+								},
+								{
+									"key": "category_id",
+									"value": "288"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Stores - Category ID Only (No Query)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/stores?module_id=4&category_id=288",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"stores"
+							],
+							"query": [
+								{
+									"key": "module_id",
+									"value": "4"
+								},
+								{
+									"key": "category_id",
+									"value": "288"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Stores - With Geo Location",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/stores?q=misal&module_id=4&lat=19.9975&lon=73.7898&radius_km=10&sort=distance",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"stores"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "misal"
+								},
+								{
+									"key": "module_id",
+									"value": "4"
+								},
+								{
+									"key": "lat",
+									"value": "19.9975"
+								},
+								{
+									"key": "lon",
+									"value": "73.7898"
+								},
+								{
+									"key": "radius_km",
+									"value": "10"
+								},
+								{
+									"key": "sort",
+									"value": "distance"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Stores - Pagination",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/stores?q=misal&module_id=4&page=2&size=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"stores"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "misal"
+								},
+								{
+									"key": "module_id",
+									"value": "4"
+								},
+								{
+									"key": "page",
+									"value": "2"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Stores - All Modules (No Module ID)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/stores?q=pizza",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"stores"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "pizza"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Stores - No Query (Popular Stores)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/stores?module_id=4&sort=popularity",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"stores"
+							],
+							"query": [
+								{
+									"key": "module_id",
+									"value": "4"
+								},
+								{
+									"key": "sort",
+									"value": "popularity"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Legacy Endpoints (Reference)",
+			"item": [
+				{
+					"name": "Food Items Search",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{test_base_url}}/search/food?q=misal",
+							"host": [
+								"{{test_base_url}}"
+							],
+							"path": [
+								"search",
+								"food"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "misal"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Food Stores Search",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{test_base_url}}/search/food/stores?q=misal",
+							"host": [
+								"{{test_base_url}}"
+							],
+							"path": [
+								"search",
+								"food",
+								"stores"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "misal"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Error Cases",
+			"item": [
+				{
+					"name": "Error - Category ID without Module ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=pizza&category_id=288",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "pizza"
+								},
+								{
+									"key": "category_id",
+									"value": "288"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Error - Invalid Module ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=pizza&module_id=99999",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "pizza"
+								},
+								{
+									"key": "module_id",
+									"value": "99999"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Error - Invalid Category ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=pizza&module_id=4&category_id=99999",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "pizza"
+								},
+								{
+									"key": "module_id",
+									"value": "4"
+								},
+								{
+									"key": "category_id",
+									"value": "99999"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://search.mangwale.ai",
+			"type": "string"
+		},
+		{
+			"key": "test_base_url",
+			"value": "https://search.test.mangwale.ai",
+			"type": "string"
+		}
+	]
+}

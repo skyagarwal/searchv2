@@ -1,0 +1,14 @@
+### Health
+GET http://localhost:3100/health
+
+### Ecom search items
+GET http://localhost:3100/search/ecom?q=milk&page=1&size=10
+
+### Ecom stores nearby
+GET http://localhost:3100/search/ecom/stores?q=&lat=19.99&lon=73.78&radius_km=5&page=1&size=10
+
+### Ecom suggest
+GET http://localhost:3100/search/ecom/suggest?q=mil&lat=19.99&lon=73.78
+
+### Trending analytics (7d, ecom)
+GET http://localhost:3100/analytics/trending?window=7d&module=ecom

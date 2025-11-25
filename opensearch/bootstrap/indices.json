@@ -1,0 +1,34 @@
+{
+  "aliases": {
+    "food_items": {},
+    "ecom_items": {}
+  },
+  "index_templates": [
+    {
+      "name": "food-items-template",
+      "index_patterns": ["food_items_*"],
+      "template": {
+        "settings": {
+          "index": {
+            "number_of_shards": 1,
+            "number_of_replicas": 0,
+            "knn": true
+          }
+        }
+      }
+    },
+    {
+      "name": "ecom-items-template",
+      "index_patterns": ["ecom_items_*"],
+      "template": {
+        "settings": {
+          "index": {
+            "number_of_shards": 1,
+            "number_of_replicas": 0,
+            "knn": true
+          }
+        }
+      }
+    }
+  ]
+}
