@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class SearchCacheService {
   private readonly logger = new Logger(SearchCacheService.name);
-  private redis: Redis;
+  private redis?: Redis;
   private localCache: Map<string, { data: any; expires: number }> = new Map();
   private stats = {
     hits: 0,
@@ -14,6 +14,12 @@ export class SearchCacheService {
   };
 
   constructor(private readonly config: ConfigService) {
+    const enableCache = this.config.get<string>('ENABLE_SEARCH_CACHE') !== 'false';
+    if (!enableCache) {
+      this.logger.warn('Search cache is DISABLED via ENABLE_SEARCH_CACHE');
+      return;
+    }
+
     const redisUrl = this.config.get<string>('REDIS_URL') || 'redis://localhost:6379/2';
     this.redis = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
@@ -39,6 +45,8 @@ export class SearchCacheService {
    * Get cached search results
    */
   async get(key: string): Promise<any | null> {
+    if (!this.redis) return null;
+
     // L1: Local in-memory cache (for hot queries, 100ms TTL)
     const local = this.localCache.get(key);
     if (local && local.expires > Date.now()) {
@@ -75,6 +83,7 @@ export class SearchCacheService {
    * Cache search results
    */
   async set(key: string, value: any, ttl: number = 300): Promise<void> {
+    if (!this.redis) return;
     try {
       this.stats.sets++;
       await this.redis.setex(key, ttl, JSON.stringify(value));
@@ -130,6 +139,7 @@ export class SearchCacheService {
    * Invalidate cache by pattern
    */
   async invalidate(pattern: string): Promise<number> {
+    if (!this.redis) return 0;
     try {
       const keys = await this.redis.keys(`search:*${pattern}*`);
       if (keys.length > 0) {
@@ -178,6 +188,7 @@ export class SearchCacheService {
    * Warm cache with popular queries
    */
   async warmCache(queries: Array<{ params: any; ttl?: number }>): Promise<void> {
+    if (!this.redis) return;
     this.logger.log(`Warming cache with ${queries.length} queries...`);
     
     for (const { params, ttl } of queries) {
@@ -197,6 +208,7 @@ export class SearchCacheService {
    * Check if query should be warmed
    */
   async shouldWarm(key: string): Promise<boolean> {
+    if (!this.redis) return false;
     try {
       const warmKey = `warm:${key}`;
       const exists = await this.redis.exists(warmKey);
@@ -241,6 +253,7 @@ export class SearchCacheService {
    * Health check
    */
   async healthCheck(): Promise<boolean> {
+    if (!this.redis) return true;
     try {
       await this.redis.ping();
       return true;

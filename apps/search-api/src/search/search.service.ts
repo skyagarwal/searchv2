@@ -275,7 +275,8 @@ export class SearchService {
       filterClauses.push({ geo_distance: { distance: `${radiusKm}km`, store_location: { lat, lon } } });
     }
 
-    // Zone validation
+    // Zone validation - DISABLED for items as they don't have zone_id indexed
+    /*
     if (hasGeo) {
       try {
         const zoneId = await this.zoneService.getZoneId(lat, lon);
@@ -287,6 +288,7 @@ export class SearchService {
         this.logger.warn(`[searchCategory] Failed to get zone ID: ${(error as any)?.message || String(error)}`);
       }
     }
+    */
 
     // Pagination
     const size = Math.max(1, Math.min(Number(filters?.size ?? 20) || 20, 50)); // Max 50 for performance
@@ -4125,7 +4127,8 @@ export class SearchService {
       filterClauses.push({ geo_distance: { distance: `${radiusKm}km`, store_location: { lat, lon } } });
     }
 
-    // Zone validation
+    // Zone validation - DISABLED for items as they don't have zone_id indexed
+    /*
     if (hasGeo) {
       try {
         const zoneId = await this.zoneService.getZoneId(lat, lon);
@@ -4136,6 +4139,7 @@ export class SearchService {
         this.logger.warn(`[searchItemsByModule] Failed to get zone ID: ${(error as any)?.message || String(error)}`);
       }
     }
+    */
 
     // Pagination
     const size = Math.max(1, Math.min(Number(filters?.size ?? 20) || 20, 100));

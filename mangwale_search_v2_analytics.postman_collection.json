@@ -1,0 +1,553 @@
+{
+	"info": {
+		"_postman_id": "mangwale-search-v2-analytics",
+		"name": "Mangwale Search V2 (Analytics & Verified)",
+		"description": "Complete Postman collection for Mangwale Search API V2. Includes verified Search endpoints and new Analytics endpoints.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Analytics",
+			"item": [
+				{
+					"name": "Trending (Default)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/analytics/trending",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"analytics",
+								"trending"
+							]
+						},
+						"description": "Returns top trending queries for the last 7 days across all modules."
+					},
+					"response": []
+				},
+				{
+					"name": "Trending (Window: 30 Days)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/analytics/trending?window=30d",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"analytics",
+								"trending"
+							],
+							"query": [
+								{
+									"key": "window",
+									"value": "30d"
+								}
+							]
+						},
+						"description": "Returns top trending queries for the last 30 days."
+					},
+					"response": []
+				},
+				{
+					"name": "Trending (Module: Food)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/analytics/trending?module=food",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"analytics",
+								"trending"
+							],
+							"query": [
+								{
+									"key": "module",
+									"value": "food"
+								}
+							]
+						},
+						"description": "Returns top trending queries specifically for the Food module."
+					},
+					"response": []
+				},
+				{
+					"name": "Trending (Time of Day: Evening)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/analytics/trending?time_of_day=evening",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"analytics",
+								"trending"
+							],
+							"query": [
+								{
+									"key": "time_of_day",
+									"value": "evening"
+								}
+							]
+						},
+						"description": "Returns top trending queries that occur during the evening."
+					},
+					"response": []
+				},
+				{
+					"name": "Trending (Complex Filter)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/analytics/trending?window=30d&module=food&time_of_day=night",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"analytics",
+								"trending"
+							],
+							"query": [
+								{
+									"key": "window",
+									"value": "30d"
+								},
+								{
+									"key": "module",
+									"value": "food"
+								},
+								{
+									"key": "time_of_day",
+									"value": "night"
+								}
+							]
+						},
+						"description": "Returns top trending queries for Food module, at Night, over the last 30 days."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Items Search",
+			"item": [
+				{
+					"name": "Basic Search (Paneer)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=Paneer",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "Paneer"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Module Filter (Food - Mod 4)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=Paneer&module_id=4",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "Paneer"
+								},
+								{
+									"key": "module_id",
+									"value": "4"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Module Filter (E-com - Mod 5)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=Paneer&module_id=5",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "Paneer"
+								},
+								{
+									"key": "module_id",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cross-Module Category Fix (Ecom + Food Cat)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?module_id=5&category_id=846",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "module_id",
+									"value": "5",
+									"description": "Intentionally wrong module"
+								},
+								{
+									"key": "category_id",
+									"value": "846",
+									"description": "Food category"
+								}
+							]
+						},
+						"description": "Tests the auto-correction logic. Should return items from Module 4 despite Module 5 being requested."
+					},
+					"response": []
+				},
+				{
+					"name": "Geo Search (Nearby)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=Paneer&lat=19.88&lon=73.79",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "Paneer"
+								},
+								{
+									"key": "lat",
+									"value": "19.88"
+								},
+								{
+									"key": "lon",
+									"value": "73.79"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Geo Search (Remote/Fallback)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=Paneer&lat=80&lon=0",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "Paneer"
+								},
+								{
+									"key": "lat",
+									"value": "80"
+								},
+								{
+									"key": "lon",
+									"value": "0"
+								}
+							]
+						},
+						"description": "Tests fallback logic when no items are found within default radius."
+					},
+					"response": []
+				},
+				{
+					"name": "Sort by Price (Asc)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=Paneer&sort=price_asc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "Paneer"
+								},
+								{
+									"key": "sort",
+									"value": "price_asc"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Sort by Distance",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=Paneer&lat=19.88&lon=73.79&sort=distance",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "Paneer"
+								},
+								{
+									"key": "lat",
+									"value": "19.88"
+								},
+								{
+									"key": "lon",
+									"value": "73.79"
+								},
+								{
+									"key": "sort",
+									"value": "distance"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Filter: Veg Only",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=Paneer&veg=true",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "Paneer"
+								},
+								{
+									"key": "veg",
+									"value": "true"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Filter: Price Range",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/items?q=Paneer&price_min=100&price_max=300",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"items"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "Paneer"
+								},
+								{
+									"key": "price_min",
+									"value": "100"
+								},
+								{
+									"key": "price_max",
+									"value": "300"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Stores Search",
+			"item": [
+				{
+					"name": "Basic Store Search",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/stores?q=Hotel",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"stores"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "Hotel"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Stores Nearby",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/stores?lat=19.88&lon=73.79",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"stores"
+							],
+							"query": [
+								{
+									"key": "lat",
+									"value": "19.88"
+								},
+								{
+									"key": "lon",
+									"value": "73.79"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Stores by Category (Cross-Module)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v2/search/stores?module_id=5&category_id=846",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"search",
+								"stores"
+							],
+							"query": [
+								{
+									"key": "module_id",
+									"value": "5"
+								},
+								{
+									"key": "category_id",
+									"value": "846"
+								}
+							]
+						},
+						"description": "Finds stores serving 'Food' category even if 'E-com' module is requested."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		}
+	]
+}
