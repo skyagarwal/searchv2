@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only apps/search-api/src/main.ts",
     "build": "tsc -p tsconfig.build.json",
-    "start": "node dist/search-api/src/main.js",
-    "start:api": "node dist/search-api/src/main.js",
+    "start": "node dist/main.js",
+    "start:api": "node dist/main.js",
     "start:nginx": "nginx -p $(pwd)/nginx -c $(pwd)/nginx/search.conf",
     "stop:nginx": "nginx -p $(pwd)/nginx -c $(pwd)/nginx/search.conf -s stop || true",
     "stop:api": "kill -9 $(ss -tulpn | awk '/:3100 /{print $7}' | cut -d, -f1) 2>/dev/null || true",

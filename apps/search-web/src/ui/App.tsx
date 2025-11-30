@@ -1,39 +1,57 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
+import './styles.css'
 
-// Module ID mapping based on database
+// ============================================================================
+// TYPES & CONSTANTS
+// ============================================================================
+
 const MODULES = {
-  FOOD: { id: 4, name: 'Food', key: 'food' },
-  SHOP: { id: 5, name: 'Shop', key: 'ecom' },
-  LOCAL_DELIVERY: { id: 3, name: 'Local Delivery', key: 'services' },
-  // Add more as needed
+  FOOD: { id: 4, name: 'Food', key: 'food', icon: '🍔' },
+  SHOP: { id: 5, name: 'Shop', key: 'ecom', icon: '🛍️' },
+  SERVICES: { id: 3, name: 'Services', key: 'services', icon: '🔧' },
+  ROOMS: { id: 6, name: 'Rooms', key: 'rooms', icon: '🏨' },
+  MOVIES: { id: 8, name: 'Movies', key: 'movies', icon: '🎬' },
 } as const
 
 type ModuleKey = 'food' | 'ecom' | 'rooms' | 'services' | 'movies'
 
-// Helper to convert module key to module_id
 const getModuleId = (key: ModuleKey): number => {
   switch(key) {
     case 'food': return 4
     case 'ecom': return 5
     case 'services': return 3
-    case 'rooms': return 6  // Tiffin's or another module
-    case 'movies': return 8  // 24 ???? or another module
+    case 'rooms': return 6
+    case 'movies': return 8
     default: return 4
   }
 }
 
-type SuggestResp = {
-  items: Array<{ id: string; name: string; price?: number | string; store_name?: string }>
-  stores: Array<{ id: string; name: string }>
-  categories: Array<{ id: string; name: string }>
-}
+// Image base URL
+const IMAGE_BASE_URL = 'https://storage.mangwale.ai/mangwale/product/'
+const STORE_IMAGE_URL = 'https://storage.mangwale.ai/mangwale/store/'
 
 type SearchItem = {
-  id: string
+  id: string | number
   name: string
   title?: string
+  description?: string
+  image?: string
+  images?: string[]
+  image_full_url?: string
+  image_fallback_url?: string
+  images_full_url?: string[]
   price?: number
+  discount?: number
+  discount_type?: string
+  tax?: number
+  tax_type?: string
   veg?: number | boolean
+  status?: number
+  stock?: number | null
+  recommended?: number
+  is_approved?: number
+  is_halal?: number
+  organic?: number
   category_id?: string | number
   category_name?: string
   category?: string
@@ -41,9 +59,38 @@ type SearchItem = {
   store_name?: string
   distance_km?: number
   avg_rating?: number
+  rating_count?: number
   base_price?: number
   genre?: string
   cast?: string | string[]
+  order_count?: number
+}
+
+type Store = {
+  id: string | number
+  name: string
+  logo?: string
+  logo_full_url?: string
+  cover_photo?: string
+  cover_photo_full_url?: string
+  distance_km?: number
+  rating?: number | string
+  avg_rating?: number | string
+  category?: string
+  module?: string
+  theater_name?: string
+  delivery_time?: string
+  minimum_order?: number
+  veg?: number
+  featured?: number
+  active?: number
+  status?: number
+}
+
+type SuggestResp = {
+  items: Array<{ id: string | number; name: string; price?: number | string; store_name?: string; image?: string }>
+  stores: Array<{ id: string | number; name: string; logo?: string }>
+  categories: Array<{ id: string | number; name: string }>
 }
 
 type Facets = {
@@ -56,35 +103,42 @@ type Facets = {
 
 type SearchResp = {
   items: SearchItem[]
-  stores?: Array<{ id: string; name: string; distance_km?: number; rating?: number; category?: string; module?: string; theater_name?: string }>
+  stores?: Store[]
   facets?: Facets
   meta: { total: number; page: number; size: number }
 }
 
-type TrendingItem = { term: string; count: number }
+// ============================================================================
+// API LAYER
+// ============================================================================
 
 const API = {
   suggest: (moduleId: number, q: string, geo?: { lat?: number; lon?: number }) => {
     const params = new URLSearchParams({ q, module_id: String(moduleId) })
     if (geo?.lat != null) params.append('lat', String(geo.lat))
     if (geo?.lon != null) params.append('lon', String(geo.lon))
-    return fetch(`/v2/search/suggest?${params.toString()}`).then(r=>r.json() as Promise<SuggestResp>)
+    return fetch(`/v2/search/suggest?${params.toString()}`).then(r => r.json() as Promise<SuggestResp>)
   },
+  
   searchItems: (moduleId: number, params: Record<string, any>) => {
     const allParams = { ...params, module_id: moduleId }
-    return fetch(`/v2/search/items?${new URLSearchParams(allParams as any).toString()}`).then(r=>r.json() as Promise<SearchResp>)
+    return fetch(`/v2/search/items?${new URLSearchParams(allParams as any).toString()}`).then(r => r.json() as Promise<SearchResp>)
   },
+  
   searchStores: (moduleId: number, params: Record<string, any>) => {
     const allParams = { ...params, module_id: moduleId }
-    return fetch(`/v2/search/stores?${new URLSearchParams(allParams as any).toString()}`).then(r=>r.json())
+    return fetch(`/v2/search/stores?${new URLSearchParams(allParams as any).toString()}`).then(r => r.json())
   },
+  
   recommendations: (itemId: string, moduleId: number, storeId?: string, limit: number = 5) => {
     const params = new URLSearchParams({ module_id: String(moduleId), limit: String(limit) })
     if (storeId) params.append('store_id', storeId)
-    return fetch(`/search/recommendations/${itemId}?${params.toString()}`).then(r=>r.json())
+    return fetch(`/search/recommendations/${itemId}?${params.toString()}`).then(r => r.json())
   },
-  trending: (moduleId: number, window='7d', time_of_day?: string) =>
-    fetch(`/analytics/trending?module_id=${moduleId}&window=${window}${time_of_day?`&time_of_day=${time_of_day}`:''}`).then(r=>r.json() as Promise<TrendingItem[]>),
+  
+  trending: (moduleId: number, window = '7d', time_of_day?: string) =>
+    fetch(`/analytics/trending?module_id=${moduleId}&window=${window}${time_of_day ? `&time_of_day=${time_of_day}` : ''}`).then(r => r.json()),
+  
   asr: async (blob: Blob) => {
     const fd = new FormData()
     fd.append('audio', blob, 'audio.webm')
@@ -92,815 +146,835 @@ const API = {
     if (!res.ok) throw new Error('ASR failed')
     return res.json() as Promise<{ transcript?: string; text?: string }>
   },
-  agent: async (prompt: string, params: Record<string, any>) => {
-    const qs = new URLSearchParams({ q: prompt, ...Object.fromEntries(Object.entries(params).filter(([,v])=> v!=='' && v!=null)) } as any)
-    const res = await fetch(`/search/agent?${qs.toString()}`)
-    if (!res.ok) throw new Error('Agent failed')
-    return res.json() as Promise<{ plan?: any; result?: any }>
-  }
 }
 
-function useDebounced<T>(value: T, delay=200) {
+// ============================================================================
+// HOOKS
+// ============================================================================
+
+function useDebounced<T>(value: T, delay = 200) {
   const [v, setV] = useState(value)
-  useEffect(()=>{ const t=setTimeout(()=>setV(value), delay); return ()=>clearTimeout(t)}, [value, delay])
+  useEffect(() => {
+    const t = setTimeout(() => setV(value), delay)
+    return () => clearTimeout(t)
+  }, [value, delay])
   return v
 }
 
+function useLocalStorage<T>(key: string, defaultValue: T): [T, (v: T) => void] {
+  const [value, setValue] = useState<T>(() => {
+    try {
+      const item = localStorage.getItem(key)
+      return item ? JSON.parse(item) : defaultValue
+    } catch {
+      return defaultValue
+    }
+  })
+  
+  const setStoredValue = useCallback((v: T) => {
+    setValue(v)
+    try {
+      localStorage.setItem(key, JSON.stringify(v))
+    } catch {}
+  }, [key])
+  
+  return [value, setStoredValue]
+}
+
+// ============================================================================
+// UTILITY COMPONENTS
+// ============================================================================
+
+const ItemImage: React.FC<{ src?: string; fallback?: string; alt: string; className?: string }> = ({ src, fallback, alt, className = '' }) => {
+  const [error, setError] = useState(false)
+  const [useFallback, setUseFallback] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+  
+  const imgSrc = useFallback && fallback ? fallback : src
+  
+  if (!imgSrc || error) {
+    return (
+      <div className={`image-placeholder ${className}`}>
+        <span>🍽️</span>
+      </div>
+    )
+  }
+  
+  return (
+    <div className={`image-wrapper ${className}`}>
+      {!loaded && <div className="skeleton-image" />}
+      <img 
+        src={imgSrc} 
+        alt={alt} 
+        className={`item-image ${loaded ? 'loaded' : ''}`}
+        onError={() => {
+          if (!useFallback && fallback) {
+            setUseFallback(true)
+          } else {
+            setError(true)
+          }
+        }}
+        onLoad={() => setLoaded(true)}
+      />
+    </div>
+  )
+}
+
+// ============================================================================
+// ITEM CARD COMPONENT
+// ============================================================================
+
+const ItemCard: React.FC<{ 
+  item: SearchItem; 
+  module: ModuleKey;
+  onRecommend?: () => void;
+}> = ({ item, module, onRecommend }) => {
+  const isVeg = item.veg === 1 || item.veg === true
+  const isNonVeg = item.veg === 0 || item.veg === false
+  const isAvailable = item.status !== 0
+  // stock: null/undefined means unlimited, 0 means out of stock, >0 means in stock
+  const inStock = item.stock === null || item.stock === undefined || item.stock > 0
+  const isRecommended = item.recommended === 1
+  const isHalal = item.is_halal === 1
+  const isOrganic = item.organic === 1
+  
+  // Calculate discounted price
+  const discount = item.discount ?? 0
+  const hasDiscount = discount > 0
+  let finalPrice = item.price || 0
+  const originalPrice = item.price || 0
+  
+  if (hasDiscount && item.price) {
+    if (item.discount_type === 'percent') {
+      finalPrice = item.price - (item.price * (discount / 100))
+    } else {
+      finalPrice = item.price - discount
+    }
+  }
+  
+  // Use full URLs from API, with fallback chain
+  const primaryImage: string | undefined = item.image_full_url || 
+    (item.images_full_url && item.images_full_url[0]) || 
+    (item.image ? `https://storage.mangwale.ai/mangwale/product/${item.image}` : undefined)
+  const fallbackImage: string | undefined = item.image_fallback_url || 
+    (item.image ? `https://mangwale.s3.ap-south-1.amazonaws.com/product/${item.image}` : undefined)
+  
+  return (
+    <div className={`item-card ${!isAvailable || !inStock ? 'unavailable' : ''}`}>
+      {/* Image Section */}
+      <div className="item-card-image">
+        <ItemImage src={primaryImage} fallback={fallbackImage} alt={item.name} />
+        
+        {/* Top badges */}
+        <div className="badges-top">
+          {isRecommended && <span className="badge-recommended">⭐ Recommended</span>}
+          {hasDiscount && (
+            <span className="badge-discount">
+              {item.discount_type === 'percent' ? `${discount}% OFF` : `₹${discount} OFF`}
+            </span>
+          )}
+        </div>
+        
+        {/* Veg/Non-Veg indicator */}
+        {(module === 'food' || module === 'ecom') && (isVeg || isNonVeg) && (
+          <div className="veg-indicator">
+            <span className={isVeg ? 'veg' : 'non-veg'}>●</span>
+          </div>
+        )}
+        
+        {/* Unavailable overlay - only show if status is 0 */}
+        {!isAvailable && (
+          <div className="unavailable-overlay">
+            <span>Unavailable</span>
+          </div>
+        )}
+      </div>
+      
+      {/* Content Section */}
+      <div className="item-card-content">
+        <h3 className="item-name">{item.name || item.title}</h3>
+        
+        {/* Store & Category */}
+        <div className="item-meta">
+          {item.store_name && <span>🏪 {item.store_name}</span>}
+          {item.category_name && <span className="category">{item.category_name}</span>}
+        </div>
+        
+        {/* Tags */}
+        <div className="item-tags">
+          {isHalal && <span className="tag halal">🌙 Halal</span>}
+          {isOrganic && <span className="tag organic">🌿 Organic</span>}
+          {item.avg_rating != null && item.avg_rating > 0 && (
+            <span className="tag rating">⭐ {Number(item.avg_rating).toFixed(1)}</span>
+          )}
+          {item.distance_km != null && (
+            <span className="tag distance">📍 {Number(item.distance_km).toFixed(1)} km</span>
+          )}
+        </div>
+        
+        {/* Price */}
+        <div className="item-price">
+          {hasDiscount ? (
+            <>
+              <span className="price-original">₹{originalPrice}</span>
+              <span className="price-final">₹{Math.round(finalPrice)}</span>
+            </>
+          ) : (
+            <span className="price-final">₹{item.price || item.base_price || 0}</span>
+          )}
+          {item.tax != null && item.tax > 0 && (
+            <span className="tax-info">+{item.tax_type === 'percent' ? `${item.tax}%` : `₹${item.tax}`} tax</span>
+          )}
+        </div>
+        
+        {/* Stock warning - only show if stock is tracked and low */}
+        {item.stock != null && item.stock > 0 && item.stock < 10 && (
+          <div className="stock-warning">⚠️ Only {item.stock} left!</div>
+        )}
+        
+        {/* Popularity */}
+        {item.order_count != null && item.order_count > 10 && (
+          <div className="item-popularity">🔥 {item.order_count}+ orders</div>
+        )}
+        
+        {/* Actions */}
+        <div className="item-actions">
+          {onRecommend && (module === 'food' || module === 'ecom') && (
+            <button className="btn-secondary" onClick={onRecommend}>💡 Similar</button>
+          )}
+          <button className="btn-primary" disabled={!isAvailable || !inStock}>
+            {isAvailable && inStock ? 'Add +' : 'N/A'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================================
+// STORE CARD COMPONENT
+// ============================================================================
+
+const StoreCard: React.FC<{ store: Store }> = ({ store }) => {
+  const isOpen = store.status !== 0 && store.active !== 0
+  const isVegOnly = store.veg === 1
+  const isFeatured = store.featured === 1
+  
+  // Handle avg_rating which might be a JSON string or number
+  let avgRating: number | null = null
+  if (store.avg_rating != null) {
+    if (typeof store.avg_rating === 'number') {
+      avgRating = store.avg_rating
+    } else if (typeof store.avg_rating === 'string') {
+      const parsed = parseFloat(store.avg_rating)
+      if (!isNaN(parsed)) avgRating = parsed
+    }
+  }
+  
+  // Use full URL if available, otherwise construct it
+  const logoUrl = store.logo_full_url || (store.logo ? (store.logo.startsWith('http') ? store.logo : `${STORE_IMAGE_URL}${store.logo}`) : null)
+  
+  return (
+    <div className={`store-card ${!isOpen ? 'closed' : ''}`}>
+      <div className="store-logo-wrapper">
+        {logoUrl ? (
+          <img src={logoUrl} alt={store.name} className="store-logo" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+        ) : (
+          <div className="store-logo-placeholder">🏪</div>
+        )}
+        {isFeatured && <span className="featured-badge">⭐</span>}
+      </div>
+      
+      <div className="store-content">
+        <h3 className="store-name">{store.name || store.theater_name}</h3>
+        
+        <div className="store-meta">
+          {store.category && <span>{store.category}</span>}
+          {isVegOnly && <span className="veg-only">🟢 Pure Veg</span>}
+        </div>
+        
+        <div className="store-stats">
+          {avgRating != null && avgRating > 0 && <span>⭐ {avgRating.toFixed(1)}</span>}
+          {store.distance_km != null && <span>📍 {Number(store.distance_km).toFixed(1)} km</span>}
+          {store.delivery_time && <span>🕐 {store.delivery_time}</span>}
+        </div>
+        
+        {store.minimum_order != null && store.minimum_order > 0 && (
+          <div className="min-order">Min ₹{store.minimum_order}</div>
+        )}
+        
+        {!isOpen && <div className="closed-badge">Closed</div>}
+      </div>
+    </div>
+  )
+}
+
+// ============================================================================
+// FILTER PANEL
+// ============================================================================
+
+const FilterPanel: React.FC<{
+  module: ModuleKey;
+  filters: any;
+  setFilters: (f: any) => void;
+  facets?: Facets;
+  onClose: () => void;
+}> = ({ module, filters, setFilters, facets, onClose }) => {
+  const update = (key: string, value: any) => setFilters({ ...filters, [key]: value })
+  
+  return (
+    <div className="filter-panel">
+      <div className="filter-header">
+        <h3>⚙️ Filters</h3>
+        <button className="btn-close" onClick={onClose}>×</button>
+      </div>
+      
+      {/* Veg/Non-Veg */}
+      {(module === 'food' || module === 'ecom') && (
+        <div className="filter-section">
+          <h4>Dietary</h4>
+          <div className="filter-options">
+            {['', 'veg', 'non-veg'].map(v => (
+              <button key={v} className={`filter-btn ${filters.veg === v ? 'active' : ''}`} onClick={() => update('veg', v)}>
+                {v === '' ? 'All' : v === 'veg' ? '🟢 Veg' : '🔴 Non-Veg'}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Special Filters */}
+      <div className="filter-section">
+        <h4>Special</h4>
+        <div className="filter-checkboxes">
+          <label><input type="checkbox" checked={filters.recommended} onChange={e => update('recommended', e.target.checked)} /> ⭐ Recommended</label>
+          <label><input type="checkbox" checked={filters.halal} onChange={e => update('halal', e.target.checked)} /> 🌙 Halal</label>
+          <label><input type="checkbox" checked={filters.organic} onChange={e => update('organic', e.target.checked)} /> 🌿 Organic</label>
+          <label><input type="checkbox" checked={filters.inStock} onChange={e => update('inStock', e.target.checked)} /> 📦 In Stock</label>
+          {module === 'food' && <label><input type="checkbox" checked={filters.openNow} onChange={e => update('openNow', e.target.checked)} /> 🕐 Open Now</label>}
+        </div>
+      </div>
+      
+      {/* Rating */}
+      <div className="filter-section">
+        <h4>Rating</h4>
+        <div className="rating-buttons">
+          {[0, 3, 3.5, 4, 4.5].map(r => (
+            <button key={r} className={`rating-btn ${filters.ratingMin === r ? 'active' : ''}`} onClick={() => update('ratingMin', r)}>
+              {r === 0 ? 'Any' : `${r}+`}
+            </button>
+          ))}
+        </div>
+      </div>
+      
+      {/* Price */}
+      <div className="filter-section">
+        <h4>Price Range</h4>
+        <div className="price-inputs">
+          <input type="number" placeholder="Min" value={filters.priceMin} onChange={e => update('priceMin', e.target.value)} />
+          <span>—</span>
+          <input type="number" placeholder="Max" value={filters.priceMax} onChange={e => update('priceMax', e.target.value)} />
+        </div>
+        <div className="price-presets">
+          <button onClick={() => { update('priceMin', ''); update('priceMax', 100) }}>Under ₹100</button>
+          <button onClick={() => { update('priceMin', 100); update('priceMax', 300) }}>₹100-300</button>
+          <button onClick={() => { update('priceMin', 300); update('priceMax', '') }}>₹300+</button>
+        </div>
+      </div>
+      
+      {/* Distance */}
+      <div className="filter-section">
+        <h4>Distance: {filters.radius} km</h4>
+        <input type="range" min="1" max="50" value={filters.radius} onChange={e => update('radius', Number(e.target.value))} className="range-slider" />
+      </div>
+      
+      {/* Categories */}
+      {facets?.category_id && facets.category_id.length > 0 && (
+        <div className="filter-section">
+          <h4>Categories</h4>
+          <div className="category-chips">
+            {facets.category_id.slice(0, 12).map(cat => (
+              <button 
+                key={cat.value} 
+                className={`category-chip ${filters.categoryId === String(cat.value) ? 'active' : ''}`}
+                onClick={() => update('categoryId', filters.categoryId === String(cat.value) ? '' : String(cat.value))}
+              >
+                {cat.label || cat.value} <span>({cat.count})</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      <button className="btn-clear" onClick={() => setFilters({
+        veg: '', recommended: false, halal: false, organic: false, inStock: false, openNow: false,
+        ratingMin: 0, priceMin: '', priceMax: '', radius: 10, categoryId: '', storeId: '', sortBy: '', semantic: false
+      })}>Clear All</button>
+    </div>
+  )
+}
+
+// ============================================================================
+// MAIN APP
+// ============================================================================
+
 export default function App() {
-  const [module, setModule] = useState<ModuleKey>(()=> (localStorage.getItem('mw_module') as ModuleKey) || 'food')
+  const [module, setModule] = useLocalStorage<ModuleKey>('mw_module', 'food')
   const [q, setQ] = useState('')
   const qDeb = useDebounced(q, 250)
-  const [history, setHistory] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem('mw_history')||'[]') } catch { return [] }
+  const [history, setHistory] = useLocalStorage<string[]>('mw_history', [])
+  const [lat, setLat] = useLocalStorage<number | null>('mw_lat', null)
+  const [lon, setLon] = useLocalStorage<number | null>('mw_lon', null)
+  
+  // Clear invalid lat/lon on startup (0,0 is in the Atlantic Ocean)
+  useEffect(() => {
+    if (lat === 0 || lon === 0) {
+      setLat(null)
+      setLon(null)
+    }
+  }, [])
+  
+  const [filters, setFilters] = useState({
+    veg: '' as '' | 'veg' | 'non-veg',
+    recommended: false, halal: false, organic: false, inStock: false, openNow: false,
+    ratingMin: 0, priceMin: '' as number | '', priceMax: '' as number | '',
+    radius: 10, categoryId: '', storeId: '', sortBy: '', semantic: false,
   })
-  const [listening, setListening] = useState(false)
-  // Voice UX state
-  const [voiceState, setVoiceState] = useState<'idle'|'listening'|'processing'|'error'>('idle')
-  const [voiceMsg, setVoiceMsg] = useState<string>('')
-  const [voiceSeconds, setVoiceSeconds] = useState<number>(0)
-  const ariaLiveRef = useRef<HTMLDivElement|null>(null)
-  const [trending, setTrending] = useState<string[]>([])
-  const [lat, setLat] = useState<number | ''>(()=>{ const v=localStorage.getItem('mw_lat'); return v? Number(v):'' })
-  const [lon, setLon] = useState<number | ''>(()=>{ const v=localStorage.getItem('mw_lon'); return v? Number(v):'' })
-  const [radius, setRadius] = useState<number>(()=>{ const v=localStorage.getItem('mw_radius'); return v? Number(v):50 })
-  const [openNow, setOpenNow] = useState(false)
-  const [vegFilter, setVegFilter] = useState<'all' | 'veg' | 'non-veg'>('all')
-  const [ratingMin, setRatingMin] = useState<number | ''>('')
-  const [priceMin, setPriceMin] = useState<number | ''>('')
-  const [priceMax, setPriceMax] = useState<number | ''>('')
-  const [categoryId, setCategoryId] = useState<string>('')
-  const [brands, setBrands] = useState<string[]>([])
-  const [storeId, setStoreId] = useState<string>('')
-  const [storeIds, setStoreIds] = useState<string[]>([])
-  const [sortBy, setSortBy] = useState<string>('') // distance, price_asc, price_desc, rating, popularity
-  const [activeTab, setActiveTab] = useState<'items'|'stores'>('items')
-
+  
+  const [activeTab, setActiveTab] = useState<'items' | 'stores'>('items')
   const [suggest, setSuggest] = useState<SuggestResp | null>(null)
   const [searchResp, setSearchResp] = useState<SearchResp | null>(null)
   const [storesResp, setStoresResp] = useState<any>(null)
-  const [recommendations, setRecommendations] = useState<any>(null)
-  const [selectedItemForRecs, setSelectedItemForRecs] = useState<string | null>(null)
   const [showSuggest, setShowSuggest] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [searchMode, setSearchMode] = useState<'normal'|'agent'>('normal')
-  const [agentPlan, setAgentPlan] = useState<any|null>(null)
-  const [semantic, setSemantic] = useState(false)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
-  const mediaRecorderRef = useRef<any|null>(null)
-  const mediaStreamRef = useRef<MediaStream|null>(null)
-  const speechRecRef = useRef<any|null>(null)
-  const voiceCanceledRef = useRef<boolean>(false)
-
-  // Beep helper
-  const playBeep = (freq=880, durationMs=120, type: OscillatorType='sine', volume=0.08) => {
-    try {
-      const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext
-      if (!AudioCtx) return
-      const ctx = new AudioCtx()
-      const o = ctx.createOscillator()
-      const g = ctx.createGain()
-      o.type = type
-      o.frequency.value = freq
-      g.gain.value = volume
-      o.connect(g).connect(ctx.destination)
-      o.start()
-      setTimeout(()=>{ o.stop(); ctx.close() }, durationMs)
-    } catch {}
-  }
-
-  const announce = (msg: string) => {
-    setVoiceMsg(msg)
-    // update aria-live politely
-    if (ariaLiveRef.current) ariaLiveRef.current.textContent = msg
-  }
-
-  // Listening timer
-  useEffect(()=>{
-    if (voiceState !== 'listening') { setVoiceSeconds(0); return }
-    const t = setInterval(()=> setVoiceSeconds(s=>s+1), 1000)
-    return ()=> clearInterval(t)
-  }, [voiceState])
-
-  useEffect(()=>{
-    return ()=> { voiceCanceledRef.current = true }
-  }, [])
-
-  useEffect(()=>{
-    if (qDeb.length>=1) {
-      API.suggest(getModuleId(module), qDeb, { lat: Number(lat)||undefined, lon: Number(lon)||undefined }).then(setSuggest).catch(()=>{})
+  const [showFilters, setShowFilters] = useState(false)
+  const [recommendations, setRecommendations] = useState<any>(null)
+  const [selectedItemForRecs, setSelectedItemForRecs] = useState<string | null>(null)
+  const [trending, setTrending] = useState<string[]>([])
+  
+  const [voiceState, setVoiceState] = useState<'idle' | 'listening' | 'processing' | 'error'>('idle')
+  const [voiceSeconds, setVoiceSeconds] = useState(0)
+  const mediaRecorderRef = useRef<any>(null)
+  const mediaStreamRef = useRef<MediaStream | null>(null)
+  const speechRecRef = useRef<any>(null)
+  const voiceCanceledRef = useRef(false)
+  
+  // Suggestions
+  useEffect(() => {
+    if (qDeb.length >= 1) {
+      API.suggest(getModuleId(module), qDeb, { lat: lat || undefined, lon: lon || undefined }).then(setSuggest).catch(() => {})
     } else setSuggest(null)
   }, [qDeb, module, lat, lon])
-
-  useEffect(()=>{ 
-    const prev = localStorage.getItem('mw_module') as ModuleKey | null
-    localStorage.setItem('mw_module', module)
-    // When switching modules, reset filters that don't apply
-    if (prev && prev !== module) {
-      // Veg only applies to food/ecom
-      if (!(module==='food' || module==='ecom')) setVegFilter('all')
-      // Open now only for food
-      if (module!=='food') setOpenNow(false)
-      // Brand only for ecom
-      if (module!=='ecom') setBrands([])
-      // Category id is reused but target field differs; clear selection to avoid stale filters
-      setCategoryId('')
-    }
-  }, [module])
-  useEffect(()=>{ if(lat!=='' ) localStorage.setItem('mw_lat', String(lat)); else localStorage.removeItem('mw_lat') }, [lat])
-  useEffect(()=>{ if(lon!=='' ) localStorage.setItem('mw_lon', String(lon)); else localStorage.removeItem('mw_lon') }, [lon])
-  useEffect(()=>{ localStorage.setItem('mw_radius', String(radius)) }, [radius])
-
-  // Reset page when filters change
+  
+  // Reset page
+  useEffect(() => { setPage(1) }, [qDeb, module, filters, activeTab])
+  
+  // Search
   useEffect(() => {
-    setPage(1)
-  }, [qDeb, module, vegFilter, openNow, ratingMin, priceMin, priceMax, categoryId, lat, lon, radius, activeTab, searchMode, storeId, storeIds, sortBy, semantic])
-
-  useEffect(()=>{
-    if (searchMode!=='normal') return
     let ignore = false
     const params: Record<string, any> = { q: qDeb, page, size: 20 }
-    if (semantic) params.semantic = '1'
     
-    // Enhanced veg/non-veg filtering: only for food & ecom
-    if ((module==='food' || module==='ecom') && vegFilter !== 'all') {
-      params.veg = vegFilter === 'veg' ? '1' : '0'
+    if (filters.semantic) params.semantic = '1'
+    if (filters.veg === 'veg') params.veg = '1'
+    if (filters.veg === 'non-veg') params.veg = '0'
+    if (filters.openNow && module === 'food') params.open_now = 1
+    if (filters.ratingMin > 0) params.rating_min = filters.ratingMin
+    if (filters.priceMin !== '') params.price_min = filters.priceMin
+    if (filters.priceMax !== '') params.price_max = filters.priceMax
+    if (filters.categoryId) params.category_id = filters.categoryId
+    if (filters.storeId) params.store_id = filters.storeId
+    if (filters.sortBy) params.sort = filters.sortBy
+    // Only add geo params if lat/lon are valid (not 0 or null)
+    if (lat != null && lon != null && lat !== 0 && lon !== 0) { 
+      params.lat = lat; params.lon = lon; params.radius_km = filters.radius 
     }
+    if (filters.recommended) params.recommended = '1'
+    if (filters.halal) params.is_halal = '1'
+    if (filters.organic) params.organic = '1'
+    if (filters.inStock) params.in_stock = '1'
     
-    if (openNow && module==='food') params.open_now=1
-    if (ratingMin!=='') params.rating_min=ratingMin
-    if (priceMin!=='') params.price_min=priceMin
-    if (priceMax!=='') params.price_max=priceMax
-    // Map categories per module
-    if (categoryId) {
-      if (module==='food' || module==='ecom') params.category_id = categoryId
-      else if (module==='services') params.category = categoryId
-      else if (module==='movies') params.genre = categoryId
-    }
-    if (storeId) params.store_id = storeId
-    if (storeIds.length > 0) params.store_ids = storeIds.join(',')
-    if (sortBy) params.sort = sortBy
-  if (lat!=='' && lon!=='') { params.lat=lat; params.lon=lon; params.radius_km=radius }
-  if (module==='ecom' && brands.length>0) params.brand = brands.join(',')
-
     setLoading(true)
-    if (activeTab==='items') {
-      API.searchItems(getModuleId(module), params).then(d=>{ 
+    
+    if (activeTab === 'items') {
+      API.searchItems(getModuleId(module), params).then(d => {
         if (ignore) return
-        setSearchResp(prev => {
-          if (page === 1) return d
-          return { ...d, items: [...(prev?.items || []), ...d.items] }
-        })
+        console.log('Search response:', d)
+        console.log('Items count:', d?.items?.length)
+        setSearchResp(prev => page === 1 ? d : { ...d, items: [...(prev?.items || []), ...d.items] })
         setHasMore(d.items.length === 20)
-        setLoading(false) 
-      }).catch(()=>{ if(!ignore) setLoading(false) })
+        setLoading(false)
+      }).catch((e) => { 
+        console.error('Search error:', e)
+        if (!ignore) setLoading(false) 
+      })
     } else {
-      API.searchStores(getModuleId(module), params).then(d=>{ 
+      API.searchStores(getModuleId(module), params).then(d => {
         if (ignore) return
-        setStoresResp(d); setLoading(false) 
-      }).catch(()=>{ if(!ignore) setLoading(false) })
+        console.log('Stores response:', d)
+        setStoresResp(d)
+        setLoading(false)
+      }).catch((e) => { 
+        console.error('Stores error:', e)
+        if (!ignore) setLoading(false) 
+      })
     }
+    
     return () => { ignore = true }
-  }, [qDeb, module, vegFilter, openNow, ratingMin, priceMin, priceMax, categoryId, lat, lon, radius, activeTab, searchMode, storeId, storeIds, sortBy, semantic, page])
-
+  }, [qDeb, module, filters, activeTab, page, lat, lon])
+  
+  // Trending
+  useEffect(() => {
+    API.trending(getModuleId(module), '7d').then((data: any) => {
+      const rows = Array.isArray(data?.rows) ? data.rows : []
+      setTrending(rows.map((d: any) => d.q).slice(0, 8))
+    }).catch(() => {})
+  }, [module])
+  
+  // Voice timer
+  useEffect(() => {
+    if (voiceState !== 'listening') { setVoiceSeconds(0); return }
+    const t = setInterval(() => setVoiceSeconds(s => s + 1), 1000)
+    return () => clearInterval(t)
+  }, [voiceState])
+  
   const onSelectSuggestion = (text: string) => {
-  setQ(text); setShowSuggest(false); setSearchMode('normal'); setAgentPlan(null)
-    setHistory((h: string[])=>{
-      const nh = [text, ...h.filter((x: string)=>x!==text)].slice(0,8)
-      localStorage.setItem('mw_history', JSON.stringify(nh))
-      return nh
-    })
+    setQ(text)
+    setShowSuggest(false)
+    const newHistory = [text, ...history.filter((x: string) => x !== text)].slice(0, 8)
+    setHistory(newHistory)
   }
-
-  const removeHistory = (text: string) => setHistory((h: string[])=>{
-    const nh = h.filter((x: string)=>x!==text); localStorage.setItem('mw_history', JSON.stringify(nh)); return nh
-  })
-  const clearHistory = () => { setHistory([]); localStorage.removeItem('mw_history') }
-
-  const facetCategories = (searchResp?.facets?.category_id || []).map(fc => ({ key: String(fc.value), name: fc.label, doc_count: fc.count }))
-  const facetBrands = (module==='ecom' ? (searchResp?.facets?.brand || []) : [])
-  const facetVeg = (searchResp?.facets?.veg || [])
-  const facetGenres = (module==='movies' ? (searchResp?.facets?.genre || []) : [])
-  const facetServiceCategories = (module==='services' ? (searchResp?.facets?.category || []) : [])
-
+  
+  const handleVoice = async () => {
+    voiceCanceledRef.current = false
+    
+    const runSearch = async (transcript: string) => {
+      if (voiceCanceledRef.current) return
+      setQ(transcript)
+      onSelectSuggestion(transcript)
+    }
+    
+    try {
+      const hasMedia = !!(navigator.mediaDevices && (window as any).MediaRecorder)
+      if (!hasMedia) throw new Error('No media')
+      
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      mediaStreamRef.current = stream
+      const chunks: BlobPart[] = []
+      const mr = new (window as any).MediaRecorder(stream, { mimeType: 'audio/webm' })
+      mediaRecorderRef.current = mr
+      
+      setVoiceState('listening')
+      
+      mr.ondataavailable = (e: any) => { if (e.data?.size > 0) chunks.push(e.data) }
+      mr.onstop = async () => {
+        setVoiceState('processing')
+        try {
+          if (voiceCanceledRef.current) return
+          const blob = new Blob(chunks, { type: 'audio/webm' })
+          const { transcript, text } = await API.asr(blob)
+          if (voiceCanceledRef.current) return
+          if (transcript || text) await runSearch(transcript || text || '')
+          setVoiceState('idle')
+        } catch {
+          setVoiceState('error')
+          setTimeout(() => setVoiceState('idle'), 1500)
+        } finally {
+          stream.getTracks().forEach(t => t.stop())
+        }
+      }
+      
+      mr.start()
+      setTimeout(() => { if (mr.state === 'recording') mr.stop() }, 4000)
+    } catch {
+      const SR: any = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
+      if (!SR) { alert('Speech not supported'); return }
+      const rec = new SR()
+      rec.lang = 'en-IN'
+      setVoiceState('listening')
+      rec.onresult = (e: any) => { setVoiceState('idle'); runSearch(e.results?.[0]?.[0]?.transcript || '') }
+      rec.onerror = () => { setVoiceState('error'); setTimeout(() => setVoiceState('idle'), 1500) }
+      rec.onend = () => setVoiceState('idle')
+      speechRecRef.current = rec
+      rec.start()
+    }
+  }
+  
+  const getLocation = () => {
+    if (!('geolocation' in navigator)) { alert('Geolocation not supported'); return }
+    navigator.geolocation.getCurrentPosition(
+      pos => { setLat(Number(pos.coords.latitude.toFixed(5))); setLon(Number(pos.coords.longitude.toFixed(5))) },
+      err => alert('Location error: ' + err.message)
+    )
+  }
+  
+  const handleRecommendation = async (item: SearchItem) => {
+    setSelectedItemForRecs(String(item.id))
+    try {
+      const data = await API.recommendations(String(item.id), getModuleId(module), item.store_id ? String(item.store_id) : undefined, 5)
+      setRecommendations(data)
+    } catch { setRecommendations(null) }
+  }
+  
+  const activeFiltersCount = [filters.veg !== '', filters.recommended, filters.halal, filters.organic, filters.inStock, filters.openNow, filters.ratingMin > 0, filters.priceMin !== '', filters.priceMax !== '', filters.categoryId !== ''].filter(Boolean).length
+  
   return (
-    <div className="container">
-      <div className="header">
-        <div className="header-inner">
-          <div className="back">⌫</div>
-          <div className="segmented">
-            <div className={"seg "+(module==='food'?'active':'')} onClick={()=>setModule('food')}>Food</div>
-            <div className={"seg "+(module==='ecom'?'active':'')} onClick={()=>setModule('ecom')}>Shop</div>
-            <div className={"seg "+(module==='rooms'?'active':'')} onClick={()=>setModule('rooms')}>Rooms</div>
-            <div className={"seg "+(module==='services'?'active':'')} onClick={()=>setModule('services')}>Services</div>
-            <div className={"seg "+(module==='movies'?'active':'')} onClick={()=>setModule('movies')}>Movies</div>
+    <div className="app">
+      {/* Header */}
+      <header className="header">
+        <div className="header-top">
+          <div className="logo">
+            <span className="logo-icon">🔍</span>
+            <span className="logo-text">Mangwale Search</span>
           </div>
-          <div className="searchbar suggest-box">
-            <span>🔎</span>
-            <input placeholder={
-              module==='food' ? 'Search your desired foods or restaurants' :
-              module==='ecom' ? 'Search your desired items or stores' :
-              module==='rooms' ? 'Search rooms or hotels' :
-              module==='services' ? 'Search services (spa, repair...)' :
-              'Search movies or theatres'
-            } value={q} onChange={e=>{ setQ(e.target.value); setSearchMode('normal'); setAgentPlan(null) }} onFocus={()=>setShowSuggest(true)} />
-            {q && <div className="search-clear" onClick={()=>setQ('')}>×</div>}
-            <div className={"icon-btn "+(listening?'rec pulse':'')} onClick={async()=>{
-              // Try server ASR first; fallback to browser SpeechRecognition
-              voiceCanceledRef.current = false
-              const runAgent = async (transcript: string)=>{
-                if (voiceCanceledRef.current) return
-                setQ(transcript)
-                const params: Record<string, any> = {}
-                if (lat!=='' && lon!=='') { params.lat=lat; params.lon=lon; params.radius_km=radius }
-                if (vegFilter !== 'all') params.veg = vegFilter === 'veg' ? '1' : '0'
-                if (openNow && module==='food') params.open_now=1
-                if (ratingMin!=='') params.rating_min=ratingMin
-                if (priceMin!=='') params.price_min=priceMin
-                if (priceMax!=='') params.price_max=priceMax
-                if (categoryId) params.category_id=categoryId
-                try {
-                  setLoading(true)
-                  const resp = await API.agent(transcript, params)
-                  setAgentPlan(resp.plan||null)
-                  setSearchMode('agent')
-                  if (resp?.plan?.module && ['food','ecom','rooms','services','movies'].includes(resp.plan.module)) setModule(resp.plan.module)
-                  if (resp?.result?.items) { setActiveTab('items'); setSearchResp(resp.result); setLoading(false) }
-                  else if (resp?.result?.stores) { setActiveTab('stores'); setStoresResp(resp.result); setLoading(false) }
-                  else { setLoading(false); setSearchMode('normal') }
-                } catch {
-                  setSearchMode('normal')
-                  setAgentPlan(null)
-                }
-              }
-
-              const useBrowserSR = async ()=>{
-                const SR: any = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
-                if (!SR) { alert('Speech recognition not supported.'); return }
-                const rec = new SR(); rec.lang='en-IN'; rec.interimResults=false; rec.maxAlternatives=1
-                setListening(true)
-                setVoiceState('listening'); announce('Now speak')
-                playBeep(900, 100, 'sine')
-                rec.onresult = (e: any)=>{ if (voiceCanceledRef.current) { speechRecRef.current = null; return } const text = e.results?.[0]?.[0]?.transcript || ''; setListening(false); setVoiceState('processing'); announce('Processing…'); if (text) runAgent(text); setVoiceState('idle'); announce(''); speechRecRef.current = null }
-                rec.onerror = ()=> { if (voiceCanceledRef.current) { speechRecRef.current = null; return } setListening(false); setVoiceState('error'); announce("Didn't catch that. Try again."); setTimeout(()=>{ setVoiceState('idle'); announce('') }, 1200); speechRecRef.current = null }
-                rec.onend = ()=> { setListening(false); if (voiceState==='listening') { setVoiceState('idle'); announce('') }; speechRecRef.current = null }
-                speechRecRef.current = rec
-                rec.start()
-              }
-
-              try {
-                const hasMedia = !!(navigator.mediaDevices && (window as any).MediaRecorder)
-                if (!hasMedia) return await useBrowserSR()
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-                mediaStreamRef.current = stream
-                const chunks: BlobPart[] = []
-                const mime = (window as any).MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm'
-                const mr = new (window as any).MediaRecorder(stream, { mimeType: mime })
-                mediaRecorderRef.current = mr
-                setListening(true)
-                setVoiceState('listening'); announce('Now speak')
-                playBeep(900, 100, 'sine')
-                mr.ondataavailable = (e: any)=>{ if (e.data && e.data.size>0) chunks.push(e.data) }
-                mr.onstop = async ()=>{
-                  setListening(false)
-                  setVoiceState('processing'); announce('Processing…')
-                  try {
-                    if (voiceCanceledRef.current) return
-                    const blob = new Blob(chunks, { type: 'audio/webm' })
-                    const { transcript, text } = await API.asr(blob)
-                    if (voiceCanceledRef.current) return
-                    const t = transcript || text || ''
-                    if (t) { playBeep(600, 80, 'square'); await runAgent(t) }
-                    else { if (voiceCanceledRef.current) return; setVoiceState('error'); announce("Didn't catch that. Try again."); setTimeout(()=>{ setVoiceState('idle'); announce('') }, 1200); await useBrowserSR() }
-                  } catch {
-                    if (!voiceCanceledRef.current) { setVoiceState('error'); announce('Network error. Trying device recognition…'); setTimeout(()=>{ setVoiceState('idle'); announce('') }, 800); await useBrowserSR() }
-                  } finally {
-                    stream.getTracks().forEach(t=>t.stop())
-                    mediaStreamRef.current = null
-                    mediaRecorderRef.current = null
-                  }
-                }
-                mr.start()
-                setTimeout(()=>{ if (mr.state==='recording') mr.stop() }, 4000)
-              } catch {
-                setVoiceState('error'); announce('Mic permission denied or unavailable.'); setTimeout(()=>{ setVoiceState('idle'); announce('') }, 1200)
-                await useBrowserSR()
-              }
-            }}>🎤</div>
+          
+          <div className="module-tabs">
+            {Object.values(MODULES).map(m => (
+              <button key={m.key} className={`module-tab ${module === m.key ? 'active' : ''}`} onClick={() => setModule(m.key as ModuleKey)}>
+                <span>{m.icon}</span>
+                <span>{m.name}</span>
+              </button>
+            ))}
           </div>
+          
+          <button className="location-btn" onClick={getLocation}>
+            📍 {lat && lon ? 'Located' : 'Location'}
+          </button>
         </div>
-      </div>
-
-      <div className="panel" style={{marginTop:12}}>
-        {agentPlan && (
-          <div className="toolbar" style={{marginBottom:8}}>
-            <span className="meta">Agent plan: {agentPlan?.module} • {agentPlan?.target || 'items'}{agentPlan?.filters? ' • '+Object.entries(agentPlan.filters).map(([k,v])=>`${k}:${v}`).join(', '):''}</span>
-            <button className="secondary" onClick={()=>{ setAgentPlan(null); setSearchMode('normal') }}>Clear</button>
+        
+        {/* Search Bar */}
+        <div className="search-wrapper">
+          <div className="search-bar">
+            <span className="search-icon">🔎</span>
+            <input
+              type="text"
+              placeholder={`Search ${module === 'food' ? 'dishes, restaurants' : 'items, stores'}...`}
+              value={q}
+              onChange={e => setQ(e.target.value)}
+              onFocus={() => setShowSuggest(true)}
+              onBlur={() => setTimeout(() => setShowSuggest(false), 200)}
+            />
+            {q && <button className="clear-btn" onClick={() => setQ('')}>×</button>}
+            <button className={`voice-btn ${voiceState === 'listening' ? 'active' : ''}`} onClick={handleVoice}>🎤</button>
           </div>
-        )}
-        <div className="toolbar">
-          <button className="secondary" onClick={()=>{
-            if (!('geolocation' in navigator)) { alert('Geolocation not supported'); return }
-            navigator.geolocation.getCurrentPosition(pos=>{
-              setLat(Number(pos.coords.latitude.toFixed(5)))
-              setLon(Number(pos.coords.longitude.toFixed(5)))
-            }, err=>{ alert('Location error: '+err.message) })
-          }}>Use my location</button>
-          <span className="warn">Set location to boost nearby results</span>
-        </div>
-        <div className="row" style={{marginTop:8}}>
-          <label>Module</label>
-          <select value={module} onChange={e=>setModule(e.target.value as ModuleKey)}>
-            <option value="food">Food</option>
-            <option value="ecom">E-com</option>
-            <option value="rooms">Rooms</option>
-            <option value="services">Services</option>
-            <option value="movies">Movies</option>
-          </select>
-
-          <div style={{flex:1}} className="suggest-box">
-            {/* placeholder input present in header */}
-      {showSuggest && (
-              <div className="suggest-list" onMouseDown={e=>e.preventDefault()}>
-        {history.length>0 && (
-                  <div className="group">
-                    <div className="meta" style={{display:'flex', justifyContent:'space-between'}}>
-                      <span>Your Last Search</span>
-                      <a style={{cursor:'pointer'}} onClick={clearHistory}>Clear All</a>
-                    </div>
-                    {history.map(h=> (
-                      <div className="item" key={'h-'+h} style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                        <span onClick={()=>onSelectSuggestion(h)}>{h}</span>
-                        <a style={{cursor:'pointer'}} onClick={()=>removeHistory(h)}>×</a>
+          
+          {/* Suggestions */}
+          {showSuggest && (
+            <div className="suggestions">
+              {history.length > 0 && !qDeb && (
+                <div className="suggest-group">
+                  <div className="suggest-header">Recent <button onClick={() => setHistory([])}>Clear</button></div>
+                  {history.slice(0, 5).map(h => (
+                    <div key={h} className="suggest-item" onClick={() => onSelectSuggestion(h)}>🕐 {h}</div>
+                  ))}
+                </div>
+              )}
+              
+              {trending.length > 0 && !qDeb && (
+                <div className="suggest-group">
+                  <div className="suggest-header">🔥 Trending</div>
+                  <div className="trending-chips">
+                    {trending.map(t => <button key={t} onClick={() => onSelectSuggestion(t)}>{t}</button>)}
+                  </div>
+                </div>
+              )}
+              
+              {(suggest?.items?.length ?? 0) > 0 && (
+                <div className="suggest-group">
+                  <div className="suggest-header">Items</div>
+                  {suggest?.items?.slice(0, 5).map(it => (
+                    <div key={it.id} className="suggest-item with-image" onClick={() => onSelectSuggestion(it.name)}>
+                      {it.image && <img src={`${IMAGE_BASE_URL}${it.image}`} alt="" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />}
+                      <div className="suggest-info">
+                        <span className="suggest-name">{it.name}</span>
+                        {it.store_name && <span className="suggest-meta">{it.store_name}</span>}
                       </div>
-                    ))}
-                  </div>
-                )}
-                {(suggest?.items && suggest.items.length>0) && (
-                  <div className="group">
-                    <div className="meta">Items</div>
-          {suggest!.items.slice(0,6).map(it=> (
-                      <div className="item" key={'i-'+it.id} onClick={()=>onSelectSuggestion(it.name)}>{it.name}</div>
-                    ))}
-                  </div>
-                )}
-                {(suggest?.stores && suggest.stores.length>0) && (
-                  <div className="group">
-                    <div className="meta">Stores</div>
-          {suggest!.stores.slice(0,6).map(st=> (
-                      <div className="item" key={'s-'+st.id} onClick={()=>onSelectSuggestion(st.name)}>{st.name}</div>
-                    ))}
-                  </div>
-                )}
-                {(suggest?.categories && suggest.categories.length>0) && (
-                  <div className="group">
-                    <div className="meta">Categories</div>
-          {suggest!.categories.slice(0,6).map(c=> (
-                      <div className="item" key={'c-'+c.id} onClick={()=>onSelectSuggestion(c.name)}>{c.name}</div>
-                    ))}
-                  </div>
-                )}
-        {qDeb && (!suggest || ((suggest.items?.length||0)+(suggest.stores?.length||0)+(suggest.categories?.length||0)===0)) && (
-          <div className="group"><div className="meta">No suggestions available</div></div>
-        )}
-              </div>
+                      {it.price && <span className="suggest-price">₹{it.price}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {(suggest?.stores?.length ?? 0) > 0 && (
+                <div className="suggest-group">
+                  <div className="suggest-header">Stores</div>
+                  {suggest?.stores?.slice(0, 4).map(st => (
+                    <div key={st.id} className="suggest-item" onClick={() => onSelectSuggestion(st.name)}>🏪 {st.name}</div>
+                  ))}
+                </div>
+              )}
+              
+              {(suggest?.categories?.length ?? 0) > 0 && (
+                <div className="suggest-group">
+                  <div className="suggest-header">Categories</div>
+                  {suggest?.categories?.slice(0, 4).map(c => (
+                    <div key={c.id} className="suggest-item" onClick={() => onSelectSuggestion(c.name)}>📂 {c.name}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        
+        {/* Quick Filters */}
+        <div className="quick-filters">
+          <button className={`filter-btn ${activeFiltersCount > 0 ? 'has-active' : ''}`} onClick={() => setShowFilters(true)}>
+            ⚙️ Filters {activeFiltersCount > 0 && <span className="badge">{activeFiltersCount}</span>}
+          </button>
+          
+          <div className="quick-chips">
+            {(module === 'food' || module === 'ecom') && (
+              <>
+                <button className={filters.veg === 'veg' ? 'active' : ''} onClick={() => setFilters({ ...filters, veg: filters.veg === 'veg' ? '' : 'veg' })}>🟢 Veg</button>
+                <button className={filters.veg === 'non-veg' ? 'active' : ''} onClick={() => setFilters({ ...filters, veg: filters.veg === 'non-veg' ? '' : 'non-veg' })}>🔴 Non-Veg</button>
+              </>
             )}
-          </div>
-
-          <button className="secondary" onClick={()=>setShowSuggest(s=>!s)}>{showSuggest? 'Hide suggestions' : 'Show suggestions'}</button>
-        </div>
-
-        <div className="chips" style={{marginTop:8}}>
-          {(module==='food' || module==='ecom') && (
-            <>
-              <div className={"chip "+(vegFilter==='all'?'active':'')} onClick={()=>setVegFilter('all')}>All</div>
-              <div className={"chip "+(vegFilter==='veg'?'active':'')} onClick={()=>setVegFilter('veg')}>🟢 Veg</div>
-              <div className={"chip "+(vegFilter==='non-veg'?'active':'')} onClick={()=>setVegFilter('non-veg')}>🔴 Non-Veg</div>
-            </>
-          )}
-          {module==='food' && <div className={"chip "+(openNow?'active':'')} onClick={()=>setOpenNow(v=>!v)}>Open now</div>}
-          <div className={"chip "+(semantic?'active':'')} onClick={()=>setSemantic(v=>!v)}>✨ Semantic</div>
-          {(module==='food' || module==='ecom') && (
-            <div className={"chip "+(ratingMin===4?'active':'')} onClick={()=>setRatingMin(ratingMin===4?'':4)}>⭐ 4.0+</div>
-          )}
-          {(module==='food' || module==='ecom' || module==='services') && (
-            <>
-              <div className={"chip "+(priceMax===100?'active':'')} onClick={()=>{ setPriceMin(''); setPriceMax(priceMax===100?'':100) }}>Under ₹100</div>
-              <div className={"chip "+(priceMin===100 && priceMax===300?'active':'')} onClick={()=>{ setPriceMin(100); setPriceMax(300) }}>₹100–₹300</div>
-              <div className={"chip "+(priceMin===300 && priceMax===''?'active':'')} onClick={()=>{ setPriceMin(300); setPriceMax('') }}>₹300+</div>
-            </>
-          )}
-          {!(module==='movies' && activeTab==='items') && (
-            <>
-              <div className={"chip "+(radius===5?'active':'')} onClick={()=>setRadius(5)}>5 km</div>
-              <div className={"chip "+(radius===10?'active':'')} onClick={()=>setRadius(10)}>10 km</div>
-              <div className={"chip "+(radius===50?'active':'')} onClick={()=>setRadius(50)}>50 km</div>
-            </>
-          )}
-        </div>
-
-        <div className="row" style={{marginTop:8}}>
-          <div>
-            <label>Latitude</label><br />
-          {/* Voice overlay and ARIA live region */}
-          <div aria-live="polite" aria-atomic="true" ref={ariaLiveRef} style={{position:'absolute', width:1, height:1, overflow:'hidden', clip:'rect(1px, 1px, 1px, 1px)'}}></div>
-          {voiceState !== 'idle' && (
-            <div className="voice-overlay" role="dialog" aria-modal="true" aria-label="Voice input">
-              <div className="voice-card">
-                <div className={"mic-circle "+(voiceState==='listening'?'active':'')}>🎤</div>
-                <div style={{fontSize:18, fontWeight:600, marginTop:8}}>
-                  {voiceState==='listening' ? 'Now speak' : voiceState==='processing' ? 'Processing…' : "Didn't catch that"}
-                </div>
-                <div className="meta" style={{marginTop:4}}>
-                  {voiceState==='listening' ? `Listening${voiceSeconds>0? ' • '+voiceSeconds+'s':''}` : voiceState==='processing' ? 'Turning speech into text' : 'Please try again'}
-                </div>
-                <div className="voice-actions">
-                  {voiceState==='listening' ? <span className="hint">We’ll stop automatically in ~4s</span> : <span className="hint">You can close this and type instead</span>}
-                  <button className="secondary" onClick={()=>{ 
-                    voiceCanceledRef.current = true
-                    try { if (mediaRecorderRef.current && mediaRecorderRef.current.state==='recording') mediaRecorderRef.current.stop() } catch {}
-                    try { if (speechRecRef.current) speechRecRef.current.stop() } catch {}
-                    try { mediaStreamRef.current?.getTracks().forEach(t=>t.stop()) } catch {}
-                    mediaRecorderRef.current = null; mediaStreamRef.current = null; speechRecRef.current = null
-                    setListening(false); setVoiceState('idle'); announce(''); 
-                  }}>Close</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-            <input type="text" inputMode="decimal" placeholder="e.g. 22.7196" value={lat} onChange={e=>setLat((e.target.value as any) as number|'' )} />
-          </div>
-          <div>
-            <label>Longitude</label><br />
-            <input type="text" inputMode="decimal" placeholder="e.g. 75.8577" value={lon} onChange={e=>setLon((e.target.value as any) as number|'' )} />
-          </div>
-          <div>
-            <label>Radius (km)</label><br />
-            <input type="range" min={1} max={100} value={radius} onChange={e=>setRadius(Number(e.target.value))} />
-            <div className="meta">{radius} km</div>
-          </div>
-          {(module==='food' || module==='ecom') && (
-            <div>
-              <label>Veg/Non-Veg</label><br />
-              <select value={vegFilter} onChange={e=>setVegFilter(e.target.value as 'all'|'veg'|'non-veg')}>
-                <option value="all">All</option>
-                <option value="veg">Veg Only</option>
-                <option value="non-veg">Non-Veg Only</option>
-              </select>
-            </div>
-          )}
-          {module==='food' && (
-            <div>
-              <label>Open now</label><br />
-              <input type="checkbox" checked={openNow} onChange={e=>setOpenNow(e.target.checked)} />
-            </div>
-          )}
-          <div>
-            <label>Rating min</label><br />
-            <input type="number" min={0} max={5} step={0.1} value={ratingMin} onChange={e=>setRatingMin(e.target.value===''?'':Number(e.target.value))} />
-          </div>
-          <div>
-            <label>Price min</label><br />
-            <input type="number" min={0} step={1} value={priceMin} onChange={e=>setPriceMin(e.target.value===''?'':Number(e.target.value))} />
-          </div>
-          <div>
-            <label>Price max</label><br />
-            <input type="number" min={0} step={1} value={priceMax} onChange={e=>setPriceMax(e.target.value===''?'':Number(e.target.value))} />
-          </div>
-          <div>
-            <label>Sort By</label><br />
-            <select value={sortBy} onChange={e=>setSortBy(e.target.value)}>
-              <option value="">Default</option>
-              {lat!=='' && lon!=='' && <option value="distance">Distance (Nearest)</option>}
-              <option value="price_asc">Price: Low to High</option>
-              <option value="price_desc">Price: High to Low</option>
-              <option value="rating">Rating (Highest)</option>
-              <option value="popularity">Popularity</option>
+            <button className={filters.semantic ? 'active' : ''} onClick={() => setFilters({ ...filters, semantic: !filters.semantic })}>✨ Smart</button>
+            <button className={filters.ratingMin === 4 ? 'active' : ''} onClick={() => setFilters({ ...filters, ratingMin: filters.ratingMin === 4 ? 0 : 4 })}>⭐ 4+</button>
+            {module === 'food' && <button className={filters.openNow ? 'active' : ''} onClick={() => setFilters({ ...filters, openNow: !filters.openNow })}>🕐 Open</button>}
+            <button className={filters.recommended ? 'active' : ''} onClick={() => setFilters({ ...filters, recommended: !filters.recommended })}>⭐ Top</button>
+            
+            <select value={filters.sortBy} onChange={e => setFilters({ ...filters, sortBy: e.target.value })}>
+              <option value="">Sort</option>
+              {lat && lon && <option value="distance">Nearest</option>}
+              <option value="price_asc">Price ↑</option>
+              <option value="price_desc">Price ↓</option>
+              <option value="rating">Rating</option>
+              <option value="popularity">Popular</option>
             </select>
           </div>
         </div>
-
-        {/* Enhanced Veg/Non-Veg Facets from Search Results */}
-        {(module==='food' || module==='ecom') && facetVeg.length > 0 && (
-          <div style={{marginTop:8}}>
-            <div className="meta">Dietary Options</div>
-            <div className="chips">
-              {facetVeg.map((f:any)=> (
-                <div key={f.value} className={"chip "+(vegFilter===(f.value===1?'veg':'non-veg')?'active':'')} onClick={()=>setVegFilter(f.value===1?'veg':'non-veg')}>
-                  {f.value === 1 ? '🟢 Veg' : '🔴 Non-Veg'} <span className="meta" style={{marginLeft:4}}>({f.count})</span>
-                </div>
-              ))}
-              {vegFilter !== 'all' && <button className="secondary" onClick={()=>setVegFilter('all')}>Show All</button>}
-            </div>
-          </div>
-        )}
-
-        {/* Store Filtering */}
-        {(module==='food' || module==='ecom') && suggest?.stores && suggest.stores.length > 0 && (
-          <div style={{marginTop:8}}>
-            <div className="meta">Filter by Store</div>
-            <div className="row" style={{marginTop:6}}>
-              <div style={{flex:1}}>
-                <label>Single Store</label><br />
-                <select value={storeId} onChange={e=>setStoreId(e.target.value)}>
-                  <option value="">All Stores</option>
-                  {suggest.stores.map(st => (
-                    <option key={st.id} value={st.id}>{st.name}</option>
-                  ))}
-                </select>
-              </div>
-              {storeId && <button className="secondary" onClick={()=>setStoreId('')}>Clear</button>}
-            </div>
-            <div className="chips">
-              {suggest.stores.slice(0,6).map(st => {
-                const active = storeIds.includes(st.id)
-                return (
-                  <div key={st.id} className={"chip "+(storeId===st.id || active?'active':'')} onClick={()=>{
-                    if (storeId === st.id) {
-                      setStoreId('')
-                    } else if (active) {
-                      setStoreIds(prev => prev.filter(id => id !== st.id))
-                    } else {
-                      setStoreIds(prev => [...prev, st.id])
-                      setStoreId('') // Clear single selection when multi-selecting
-                    }
-                  }}>
-                    {st.name}
-                  </div>
-                )
-              })}
-              {storeIds.length > 0 && <button className="secondary" onClick={()=>setStoreIds([])}>Clear Multi</button>}
-            </div>
-          </div>
-        )}
-
-        {(module==='food' || module==='ecom') && (
-          <div style={{marginTop:8}}>
-            <div className="meta">Popular Categories</div>
-            <div className="chips">
-              {(facetCategories.length>0 ? facetCategories.slice(0,8) : [
-                { key:'846', name:'Chinese', doc_count:0 },
-                { key:'21', name:'Sweets', doc_count:0 },
-                { key:'98', name:'Starters', doc_count:0 },
-                { key:'99', name:'Rolls', doc_count:0 },
-                { key:'101', name:'Desserts', doc_count:0 },
-                { key:'120', name:'Chaat', doc_count:0 },
-                { key:'121', name:'Dairy product', doc_count:0 },
-                // { key:'frozen', name:'Frozen Foods', doc_count:0 },
-                // { key:'ready-to-eat', name:'Ready to Eat', doc_count:0 },
-              ]).map((fc:any)=> (
-                <div key={fc.key} className={"chip "+(String(categoryId)===String(fc.key)?'active':'')} onClick={()=>setCategoryId(String(fc.key))}>
-                  {fc.name || fc.key}{fc.doc_count? <span className="meta" style={{marginLeft:4}}>({fc.doc_count})</span>: null}
-                </div>
-              ))}
-              {categoryId && <button className="secondary" onClick={()=>setCategoryId('')}>Clear</button>}
-            </div>
-          </div>
-        )}
-
-        {/* Service Categories for Services Module */}
-        {module==='services' && facetServiceCategories.length > 0 && (
-          <div style={{marginTop:8}}>
-            <div className="meta">Service Categories</div>
-            <div className="row" style={{marginTop:6}}>
-              <div>
-                <label>Choose category</label><br />
-                <select value={categoryId} onChange={e=>setCategoryId(e.target.value)}>
-                  <option value="">All</option>
-                  {facetServiceCategories.map((c:any)=> (
-                    <option key={c.value} value={String(c.value)}>{c.value} ({c.count})</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="chips">
-              {facetServiceCategories.slice(0,8).map((c:any)=> (
-                <div key={c.value} className={"chip "+(categoryId===String(c.value)?'active':'')} onClick={()=>setCategoryId(String(c.value))}>
-                  {c.value} <span className="meta" style={{marginLeft:4}}>({c.count})</span>
-                </div>
-              ))}
-              {categoryId && <button className="secondary" onClick={()=>setCategoryId('')}>Clear</button>}
-            </div>
-          </div>
-        )}
-
-        {/* Movie Genres for Movies Module */}
-        {module==='movies' && facetGenres.length > 0 && (
-          <div style={{marginTop:8}}>
-            <div className="meta">Movie Genres</div>
-            <div className="row" style={{marginTop:6}}>
-              <div>
-                <label>Choose genre</label><br />
-                <select value={categoryId} onChange={e=>setCategoryId(e.target.value)}>
-                  <option value="">All</option>
-                  {facetGenres.map((g:any)=> (
-                    <option key={g.value} value={String(g.value)}>{g.value} ({g.count})</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="chips">
-              {facetGenres.slice(0,8).map((g:any)=> (
-                <div key={g.value} className={"chip "+(categoryId===String(g.value)?'active':'')} onClick={()=>setCategoryId(String(g.value))}>
-                  {g.value} <span className="meta" style={{marginLeft:4}}>({g.count})</span>
-                </div>
-              ))}
-              {categoryId && <button className="secondary" onClick={()=>setCategoryId('')}>Clear</button>}
-            </div>
-          </div>
-        )}
-
-        {module==='ecom' && (
-          <div style={{marginTop:8}}>
-            <div className="meta">Popular Brands</div>
-            <div className="chips">
-              {facetBrands.slice(0,12).map((b:any)=> {
-                const active = brands.includes(b.value)
-                return (
-                  <div key={b.value} className={"chip "+(active?'active':'')} onClick={()=>{
-                    setBrands(prev => active ? prev.filter(x=>x!==b.value) : [...prev, b.value])
-                  }}>
-                    {b.value} {b.count? <span className="meta" style={{marginLeft:4}}>({b.count})</span> : null}
-                  </div>
-                )
-              })}
-              {brands.length>0 && <button className="secondary" onClick={()=>setBrands([])}>Clear</button>}
-            </div>
-          </div>
-        )}
-
+      </header>
+      
+      {/* Main */}
+      <main className="main">
+        {/* Tabs */}
         <div className="tabs">
-          <div className={'tab '+(activeTab==='items'?'active':'')} onClick={()=>setActiveTab('items')}>Items</div>
-          <div className={'tab '+(activeTab==='stores'?'active':'')} onClick={()=>setActiveTab('stores')}>Stores</div>
+          <button className={activeTab === 'items' ? 'active' : ''} onClick={() => setActiveTab('items')}>
+            {module === 'food' ? '🍔 Dishes' : '📦 Items'}
+            {searchResp?.meta?.total != null && <span>({searchResp.meta.total})</span>}
+          </button>
+          <button className={activeTab === 'stores' ? 'active' : ''} onClick={() => setActiveTab('stores')}>
+            {module === 'food' ? '🏪 Restaurants' : '🏬 Stores'}
+          </button>
         </div>
-
-        {activeTab==='items' ? (
+        
+        {activeTab === 'items' ? (
           <div className="results">
-            {loading && Array.from({length:6}).map((_,i)=>(
-              <div className="card" key={'sk-i-'+i}>
-                <div className="skeleton line" style={{width:'70%'}}></div>
-                <div className="skeleton line" style={{width:'40%'}}></div>
-                <div className="skeleton line" style={{width:'30%'}}></div>
-              </div>
-            ))}
-
-            {/* Render Stores Section if available (Swiggy/Zomato style) */}
-            {!loading && searchResp?.stores && searchResp.stores.length > 0 && (
-              <div style={{marginBottom: 16}}>
-                <div className="meta" style={{marginBottom: 8, fontWeight: 600, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.5px'}}>
-                  {module === 'food' ? 'Restaurants' : 'Stores'}
-                </div>
-                <div style={{display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'none'}}>
-                  {searchResp.stores.map(st => (
-                    <div className="card" key={'top-store-'+st.id} style={{minWidth: 220, maxWidth: 220, flexShrink: 0, border: '1px solid var(--primary)', background: '#f0f7ff'}}>
-                      <div style={{fontWeight:600, fontSize: 15}}>{st.name || st.theater_name}</div>
-                      <div style={{marginTop:6}}>
-                        {st.distance_km!=null && <span className="pill" style={{background: 'white'}}>{Number(st.distance_km).toFixed(1)} km</span>}
-                        {st.rating!=null && <span className="pill" style={{background: 'white'}}>⭐ {Number(st.rating).toFixed(1)}</span>}
-                      </div>
-                      <div className="meta" style={{marginTop: 4}}>{st.category || st.module}</div>
-                    </div>
-                  ))}
-                </div>
-                <div className="meta" style={{marginTop: 12, marginBottom: 8, fontWeight: 600, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.5px'}}>
-                  {module === 'food' ? 'Dishes' : 'Items'}
+            {/* Top Stores */}
+            {(searchResp?.stores?.length ?? 0) > 0 && (
+              <div className="stores-row">
+                <h3>{module === 'food' ? '🏪 Top Restaurants' : '🏬 Featured'}</h3>
+                <div className="stores-scroll">
+                  {searchResp?.stores?.map(st => <StoreCard key={st.id} store={st} />)}
                 </div>
               </div>
             )}
-
-            {!loading && searchResp?.items?.map(it=> (
-              <div className="card" key={it.id}>
-                <div style={{fontWeight:600}}>{it.name || (it as any).title}</div>
-                <div className="meta">
-                  {it.store_name && <span>🏪 {it.store_name} • </span>}
-                  {it.category_name || it.category || it.genre} 
-                  {(it.veg === 1 || it.veg === true) && ' • 🟢 Veg'}
-                  {(it.veg === 0 || it.veg === false) && ' • 🔴 Non-Veg'}
-                </div>
-                <div style={{marginTop:6}}>
-                  {it.avg_rating!=null && <span className="pill">⭐ {Number(it.avg_rating).toFixed(1)}</span>}
-                  {it.distance_km!=null && <span className="pill">{Number(it.distance_km).toFixed(1)} km</span>}
-                  {it.price!=null && <span className="pill">₹{it.price}</span>}
-                  {it.base_price!=null && <span className="pill">₹{it.base_price}</span>}
-                  {module==='ecom' && (it as any).brand && <span className="pill">{(it as any).brand}</span>}
-                  {module==='movies' && it.cast && <span className="pill">{Array.isArray(it.cast)? it.cast.slice(0,2).join(', ') : it.cast}</span>}
-                </div>
-                {(module==='food' || module==='ecom') && (
-                  <div style={{marginTop:8}}>
-                    <button className="secondary" style={{fontSize:12, padding:'4px 8px'}} onClick={()=>{
-                      setSelectedItemForRecs(it.id)
-                      API.recommendations(it.id, getModuleId(module), it.store_id ? String(it.store_id) : undefined, 5)
-                        .then(data => setRecommendations(data))
-                        .catch(() => setRecommendations(null))
-                    }}>
-                      💡 Frequently Bought Together
-                    </button>
+            
+            {/* Items Grid */}
+            <div className="items-grid">
+              {loading && page === 1 && Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="item-card skeleton">
+                  <div className="skeleton-image" />
+                  <div className="skeleton-content">
+                    <div className="skeleton-line w70" />
+                    <div className="skeleton-line w50" />
+                    <div className="skeleton-line w30" />
                   </div>
-                )}
+                </div>
+              ))}
+              
+              {!loading && searchResp?.items?.map(item => (
+                <ItemCard key={item.id} item={item} module={module} onRecommend={() => handleRecommendation(item)} />
+              ))}
+            </div>
+            
+            {hasMore && !loading && (searchResp?.items?.length ?? 0) > 0 && (
+              <button className="load-more" onClick={() => setPage(p => p + 1)}>Load More</button>
+            )}
+            
+            {loading && page > 1 && <div className="loading">Loading...</div>}
+            
+            {!loading && searchResp?.items?.length === 0 && (
+              <div className="no-results">
+                <span>🔍</span>
+                <h3>No results</h3>
+                <p>Try different search or filters</p>
               </div>
-            ))}
-            {hasMore && !loading && (
-              <button className="secondary" style={{width:'100%', marginTop:16}} onClick={()=>setPage(p=>p+1)}>Load More</button>
             )}
           </div>
         ) : (
-          <div className="results">
-            {loading && Array.from({length:6}).map((_,i)=>(
-              <div className="card" key={'sk-s-'+i}>
-                <div className="skeleton line" style={{width:'60%'}}></div>
-                <div className="skeleton line" style={{width:'40%'}}></div>
-              </div>
-            ))}
-            {!loading && storesResp?.stores?.map((st:any)=> (
-              <div className="card" key={st.id}>
-                <div style={{fontWeight:600}}>{st.name || st.theater_name}</div>
-                <div style={{marginTop:6}}>
-                  {st.distance_km!=null && <span className="pill">{Number(st.distance_km).toFixed(1)} km</span>}
-                  {st.rating!=null && <span className="pill">⭐ {Number(st.rating).toFixed(1)}</span>}
+          <div className="stores-grid">
+            {loading && Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="store-card skeleton">
+                <div className="skeleton-logo" />
+                <div className="skeleton-content">
+                  <div className="skeleton-line w70" />
+                  <div className="skeleton-line w50" />
                 </div>
-                <div className="meta">{st.category || st.module}</div>
               </div>
             ))}
+            
+            {!loading && storesResp?.stores?.map((st: Store) => <StoreCard key={st.id} store={st} />)}
           </div>
         )}
-      </div>
-
-      {/* Recommendations Panel */}
-      {recommendations && selectedItemForRecs && (
-        <div className="panel" style={{marginTop:12, background:'#fffbea', borderLeft:'3px solid #ff9800'}}>
-          <div className="row" style={{alignItems:'center', marginBottom:8}}>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:600, fontSize:16}}>💡 Frequently Bought Together</div>
-              <div className="meta" style={{fontSize:12}}>
-                {recommendations.item_name && `with ${recommendations.item_name}`}
-                {recommendations.store_id && ` (Same Store)`}
-              </div>
-            </div>
-            <button className="secondary" onClick={()=>{ setRecommendations(null); setSelectedItemForRecs(null) }}>✕</button>
+      </main>
+      
+      {/* Filter Panel */}
+      {showFilters && (
+        <div className="overlay" onClick={() => setShowFilters(false)}>
+          <div className="panel-container" onClick={e => e.stopPropagation()}>
+            <FilterPanel module={module} filters={filters} setFilters={setFilters} facets={searchResp?.facets} onClose={() => setShowFilters(false)} />
           </div>
-          {recommendations.recommendations && recommendations.recommendations.length > 0 ? (
-            <div className="results" style={{marginTop:8}}>
-              {recommendations.recommendations.map((rec: any) => (
-                <div className="card" key={rec.item_id} style={{background:'white'}}>
-                  <div style={{fontWeight:600}}>{rec.item_name}</div>
-                  <div className="meta">
-                    {rec.store_name && `🏪 ${rec.store_name}`}
-                  </div>
-                  <div style={{marginTop:6}}>
-                    {rec.price && <span className="pill">₹{rec.price}</span>}
-                    {rec.times_together && <span className="pill">🔗 Bought together {rec.times_together}× times</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="meta" style={{padding:'12px 0', textAlign:'center'}}>
-              No recommendations available for this item
-            </div>
-          )}
         </div>
       )}
-
-      <div className="panel" style={{marginTop:12}}>
-        <div className="row">
-          <div>
-            <label>Trending window</label><br />
-            <select id="window">
-              <option value="7d">7d</option>
-              <option value="24h">24h</option>
-              <option value="30d">30d</option>
-            </select>
-          </div>
-          <div>
-            <label>Time of day</label><br />
-            <select id="tod">
-              <option value="">All</option>
-              <option value="morning">Morning</option>
-              <option value="afternoon">Afternoon</option>
-              <option value="evening">Evening</option>
-              <option value="night">Night</option>
-            </select>
-          </div>
-          <button className="secondary" onClick={async()=>{
-            const windowSel = (document.getElementById('window') as HTMLSelectElement).value
-            const tod = (document.getElementById('tod') as HTMLSelectElement).value
-            const data: any = await API.trending(getModuleId(module), windowSel, tod || undefined)
-            const rows = Array.isArray(data?.rows) ? data.rows : []
-            setTrending(rows.map((d:any)=> d.q ).slice(0,10))
-          }}>Load trending</button>
-        </div>
-        {trending.length>0 && (
-          <div style={{marginTop:8}}>
-            <div className="meta">Trending</div>
-            <div className="chips">
-              {trending.map(t => (
-                <div key={t} className="chip" onClick={()=>onSelectSuggestion(t)}>{t}</div>
-              ))}
+      
+      {/* Recommendations */}
+      {recommendations && selectedItemForRecs && (
+        <div className="overlay" onClick={() => { setRecommendations(null); setSelectedItemForRecs(null) }}>
+          <div className="recs-panel" onClick={e => e.stopPropagation()}>
+            <div className="recs-header">
+              <h3>💡 Frequently Bought Together</h3>
+              <button onClick={() => { setRecommendations(null); setSelectedItemForRecs(null) }}>×</button>
             </div>
+            {recommendations.recommendations?.length > 0 ? (
+              <div className="recs-list">
+                {recommendations.recommendations.map((rec: any) => (
+                  <div key={rec.item_id} className="rec-item">
+                    <div className="rec-info">
+                      <span className="rec-name">{rec.item_name}</span>
+                      {rec.store_name && <span className="rec-store">🏪 {rec.store_name}</span>}
+                    </div>
+                    <div className="rec-stats">
+                      {rec.price && <span>₹{rec.price}</span>}
+                      {rec.times_together && <span>🔗 {rec.times_together}×</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : <div className="no-recs">No recommendations</div>}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+      
+      {/* Voice Modal */}
+      {voiceState !== 'idle' && (
+        <div className="overlay voice-overlay">
+          <div className="voice-modal">
+            <div className={`voice-circle ${voiceState === 'listening' ? 'active' : ''}`}>🎤</div>
+            <h3>{voiceState === 'listening' ? 'Listening...' : voiceState === 'processing' ? 'Processing...' : 'Try again'}</h3>
+            {voiceState === 'listening' && voiceSeconds > 0 && <p>{voiceSeconds}s</p>}
+            <button onClick={() => {
+              voiceCanceledRef.current = true
+              try { mediaRecorderRef.current?.stop() } catch {}
+              try { speechRecRef.current?.stop() } catch {}
+              try { mediaStreamRef.current?.getTracks().forEach(t => t.stop()) } catch {}
+              setVoiceState('idle')
+            }}>Cancel</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -269,6 +269,14 @@ services:
       - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
       - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-clickhouse123}
       - EMBEDDING_SERVICE_URL=http://search-embedding-service:3101
+      # Image Storage Configuration (MinIO primary, S3 fallback)
+      - STORAGE_TYPE=${STORAGE_TYPE:-minio}
+      - S3_URL=${S3_URL:-https://mangwale.s3.ap-south-1.amazonaws.com}
+      - S3_BUCKET=${S3_BUCKET:-mangwale}
+      - S3_REGION=${S3_REGION:-ap-south-1}
+      - MINIO_URL=${MINIO_URL:-https://storage.mangwale.ai}
+      - MINIO_BUCKET=${MINIO_BUCKET:-mangwale}
+      - IMAGE_FALLBACK_ENABLED=${IMAGE_FALLBACK_ENABLED:-true}
     # ports:
     #   - "3100:3100"
     networks:

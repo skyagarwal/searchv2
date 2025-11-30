@@ -6,9 +6,11 @@ import { AnalyticsService } from '../modules/analytics.service';
 import { EmbeddingService } from '../modules/embedding.service';
 import { SearchCacheService } from '../modules/cache.service';
 import { ZoneService } from '../modules/zone.service';
+import { ImageService } from '../modules/image.service';
 
 @Module({
   controllers: [SearchController],
-  providers: [SearchService, ModuleService, AnalyticsService, EmbeddingService, SearchCacheService, ZoneService],
+  providers: [SearchService, ModuleService, AnalyticsService, EmbeddingService, SearchCacheService, ZoneService, ImageService],
+  exports: [ImageService],
 })
 export class SearchModule {}

@@ -1,0 +1,31 @@
+http:
+  routers:
+    # HTTP to HTTPS Redirect for MinIO
+    minio-redirect:
+      rule: "Host(`storage.mangwale.ai`)"
+      entryPoints:
+        - web
+      service: noop@internal
+      middlewares:
+        - https-redirect-minio
+
+    # MinIO Storage Router (HTTPS)
+    minio-storage:
+      rule: "Host(`storage.mangwale.ai`)"
+      service: minio-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+
+  middlewares:
+    https-redirect-minio:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+  services:
+    minio-service:
+      loadBalancer:
+        servers:
+          - url: "http://172.25.0.16:9000"

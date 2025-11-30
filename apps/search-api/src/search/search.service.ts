@@ -6,6 +6,7 @@ import { EmbeddingService } from '../modules/embedding.service';
 import { ModuleService } from './module.service';
 import { SearchCacheService } from '../modules/cache.service';
 import { ZoneService } from '../modules/zone.service';
+import { ImageService } from '../modules/image.service';
 
 @Injectable()
 export class SearchService {
@@ -19,7 +20,8 @@ export class SearchService {
     private readonly embeddingService: EmbeddingService,
     private readonly moduleService: ModuleService,
     private readonly cacheService: SearchCacheService,
-    private readonly zoneService: ZoneService
+    private readonly zoneService: ZoneService,
+    private readonly imageService: ImageService
   ) {
     this.cacheEnabled = this.config.get<string>('ENABLE_SEARCH_CACHE') !== 'false';
     const node = this.config.get<string>('OPENSEARCH_HOST') || 'http://localhost:9200';
@@ -180,15 +182,25 @@ export class SearchService {
   private async getStoreDetails(storeIds: string[], module: string): Promise<Record<string, any>> {
     if (!storeIds.length) return {};
 
-    const storeAlias = module === 'food' ? 'food_stores' : module === 'ecom' ? 'ecom_stores' : 'food_stores';
+    // For module_id based search, search all store indices
+    const storeAliases = module === 'all' || !module 
+      ? this.getAllStoreIndices()
+      : [module === 'food' ? 'food_stores' : module === 'ecom' ? 'ecom_stores' : 'food_stores'];
     
-    try {
-      const response = await this.client.mget({
-        index: storeAlias,
-        body: { ids: storeIds }
-      });
+    const storeDetails: Record<string, any> = {};
+    
+    // Search all store indices in parallel
+    const results = await Promise.all(
+      storeAliases.map(alias =>
+        this.client.mget({
+          index: alias,
+          body: { ids: storeIds }
+        }).catch(() => ({ body: { docs: [] } }))
+      )
+    );
 
-      const storeDetails: Record<string, any> = {};
+    // Combine results from all indices
+    for (const response of results) {
       for (const doc of response.body.docs || []) {
         if (doc.found && doc._source) {
           const storeId = doc._id;
@@ -203,11 +215,9 @@ export class SearchService {
           storeDetails[numericId] = details;
         }
       }
-      return storeDetails;
-    } catch (error) {
-      console.warn('Failed to fetch store details:', error);
-      return {};
     }
+    
+    return storeDetails;
   }
 
   // Optimized category search for fast loading and scroll pagination
@@ -236,9 +246,9 @@ export class SearchService {
     // Vegetarian filter
     const veg = filters?.veg;
     if (veg === '1' || veg === 'true') {
-      filterClauses.push({ term: { veg: true } });
+      filterClauses.push({ term: { veg: 1 } });
     } else if (veg === '0' || veg === 'false') {
-      filterClauses.push({ term: { veg: false } });
+      filterClauses.push({ term: { veg: 0 } });
     }
 
     // Price range filters
@@ -267,7 +277,9 @@ export class SearchService {
     const lon = filters?.lon ? Number(filters.lon) : undefined;
     const radiusKm = filters?.radius_km ? Number(filters.radius_km) : undefined;
     // Treat lat=0, lon=0 as no location (invalid coordinates)
-    const hasGeo = lat !== undefined && !Number.isNaN(lat) && lon !== undefined && !Number.isNaN(lon) && 
+    // Only food module supports geo features currently
+    const supportsGeo = module === 'food';
+    const hasGeo = supportsGeo && lat !== undefined && !Number.isNaN(lat) && lon !== undefined && !Number.isNaN(lon) && 
                    !(lat === 0 && lon === 0);
 
     // Geo radius filter
@@ -333,14 +345,16 @@ export class SearchService {
       from,
       sort,
       _source: [
-        'name', 'title', 'description', 'image', 'images', 'slug', 'price', 'base_price', 'veg', 'brand',
+        'id', 'name', 'title', 'description', 'image', 'images', 'slug', 'price', 'base_price', 'veg', 'brand',
         'category_id', 'category_name', 'category', 'store_id', 'avg_rating', 'order_count', 'store_location',
-        'module_id', 'rating_count', 'available_time_starts', 'available_time_ends'
+        'module_id', 'rating_count', 'available_time_starts', 'available_time_ends',
+        'discount', 'discount_type', 'status', 'tax', 'tax_type', 'stock', 'recommended', 'is_approved',
+        'is_halal', 'is_visible', 'organic', 'maximum_cart_quantity', 'unit_id', 'zone_id', 'store_name'
       ],
       script_fields: hasGeo ? {
         distance_km: {
           script: {
-            source: "if (doc['store_location'].size() == 0) return null; doc['store_location'].arcDistance(params.lat, params.lon) / 1000.0",
+            source: "if (!doc.containsKey('store_location') || doc['store_location'].size() == 0) return null; doc['store_location'].arcDistance(params.lat, params.lon) / 1000.0",
             params: { lat, lon },
           },
         },
@@ -571,9 +585,9 @@ export class SearchService {
     // Vegetarian filter
     const veg = filters?.veg;
     if (veg === '1' || veg === 'true') {
-      filterClauses.push({ term: { veg: true } });
+      filterClauses.push({ term: { veg: 1 } });
     } else if (veg === '0' || veg === 'false') {
-      filterClauses.push({ term: { veg: false } });
+      filterClauses.push({ term: { veg: 0 } });
     }
 
     // Brand filter (for e-commerce)
@@ -674,7 +688,7 @@ export class SearchService {
       script_fields: hasGeo ? {
         distance_km: {
           script: {
-            source: "if (doc['location'].size() == 0) return null; doc['location'].arcDistance(params.lat, params.lon) / 1000.0",
+            source: "if (!doc.containsKey('location') || doc['location'].size() == 0) return null; doc['location'].arcDistance(params.lat, params.lon) / 1000.0",
             params: { lat, lon },
           },
         },
@@ -784,8 +798,8 @@ export class SearchService {
     this.logger.log(`Getting recommendations for item ${itemId} in module ${moduleId}${storeId ? ` (store ${storeId})` : ''}`);
 
     try {
-      // Get the index name for this module
-      const indexName = moduleId === 4 ? 'food_items_v3' : moduleId === 5 ? 'ecom_items_v3' : null;
+      // Get the index alias for this module (uses aliases that point to versioned indices)
+      const indexName = moduleId === 4 ? 'food_items' : moduleId === 5 ? 'ecom_items' : null;
       if (!indexName) {
         throw new BadRequestException('Invalid module_id. Only modules 4 (food) and 5 (ecom) supported.');
       }
@@ -939,9 +953,9 @@ export class SearchService {
     const veg = filters?.veg;
     const vegStr = String(veg);
     if (vegStr === '1' || vegStr === 'true' || vegStr === 'veg') {
-      filterClauses.push({ term: { veg: true } });
+      filterClauses.push({ term: { veg: 1 } });
     } else if (vegStr === '0' || vegStr === 'false' || vegStr === 'non-veg') {
-      filterClauses.push({ term: { veg: false } });
+      filterClauses.push({ term: { veg: 0 } });
     }
 
     // Category filter
@@ -1050,7 +1064,7 @@ export class SearchService {
         semantic_search: true,
         knn_search: true,
         filters,
-        items,
+        items: this.imageService.transformItemsWithImages(items),
         facets: {},
         meta: {
           total: response.body.hits?.total?.value ?? 0,
@@ -1163,9 +1177,9 @@ export class SearchService {
     // Enhanced veg/non-veg filtering: supports 'veg', 'non-veg', or 'all'
     const veg = filters?.veg;
     if (veg === '1' || veg === 'true' || veg === 'veg') {
-      filterClauses.push({ term: { veg: true } });
+      filterClauses.push({ term: { veg: 1 } });
     } else if (veg === '0' || veg === 'false' || veg === 'non-veg') {
-      filterClauses.push({ term: { veg: false } });
+      filterClauses.push({ term: { veg: 0 } });
     }
     // If veg === 'all' or undefined, no filter is applied (show both)
     const categoryId = filters?.category_id;
@@ -1355,9 +1369,11 @@ export class SearchService {
       from,
       aggs: aggsConfig,
       _source: [
-        'name','title','description','image','images','slug','price','base_price','veg','brand','attributes','category_id','category_name','category','store_id',
+        'id','name','title','description','image','images','slug','price','base_price','veg','brand','attributes','category_id','category_name','category','store_id',
         'avg_rating','order_count','store_location','module_id','rating_count','available_time_starts','available_time_ends',
-        'genre','cast','duration_min','pricing_model','visit_fee'
+        'genre','cast','duration_min','pricing_model','visit_fee',
+        'discount','discount_type','status','tax','tax_type','stock','recommended','is_approved',
+        'is_halal','is_visible','organic','maximum_cart_quantity','unit_id','zone_id','store_name'
       ],
       script_fields: (supportsItemGeo && hasGeo) ? {
         distance_km: {
@@ -1742,8 +1758,8 @@ export class SearchService {
       module,
       q,
       filters,
-      stores,
-      items,
+      stores: this.imageService.transformStoresWithImages(stores),
+      items: this.imageService.transformItemsWithImages(items),
       facets,
       meta: { total: res.body.hits?.total?.value ?? hits.length },
     };
@@ -1887,9 +1903,9 @@ export class SearchService {
     // Veg filter
     const veg = filters?.veg;
     if (veg === '1' || veg === 'true' || veg === 'veg') {
-      filterClauses.push({ term: { veg: true } });
+      filterClauses.push({ term: { veg: 1 } });
     } else if (veg === '0' || veg === 'false' || veg === 'non-veg') {
-      filterClauses.push({ term: { veg: false } });
+      filterClauses.push({ term: { veg: 0 } });
     }
 
     // Category filter (already validated above)
@@ -2049,11 +2065,12 @@ export class SearchService {
       from,
       sort,
       _source: [
-        'name', 'title', 'description', 'image', 'images', 'slug', 'price', 'base_price', 'veg', 'brand',
+        'id', 'name', 'title', 'description', 'image', 'images', 'slug', 'price', 'base_price', 'veg', 'brand',
         'category_id', 'category_name', 'category', 'store_id', 'avg_rating', 'store_location',
         'module_id', 'rating_count', 'available_time_starts', 'available_time_ends', 'store_name', 'zone_id',
         'order_count', 'review_count', 'trending_score', 'is_trending', 'quality_score', 'popularity_score',
-        'frequently_with'
+        'frequently_with', 'discount', 'discount_type', 'status', 'tax', 'tax_type', 'stock', 'recommended',
+        'is_approved', 'is_halal', 'is_visible', 'organic', 'maximum_cart_quantity', 'unit_id'
       ],
       script_fields: hasGeo ? {
         distance_km: {
@@ -2787,7 +2804,7 @@ export class SearchService {
         },
       } : itemQuery,
       size,
-      _source: ['name','title', 'slug', 'image', 'images', 'price', 'base_price', 'veg', 'category_id', 'category_name', 'category', 'store_id', 'store_location', 'genre','cast'],
+      _source: ['name','title', 'slug', 'image', 'images', 'price', 'base_price', 'veg', 'category_id', 'category_name', 'category', 'store_id', 'store_location', 'genre','cast', 'module_id', 'description', 'available_time_starts', 'available_time_ends', 'rating_count', 'avg_rating', 'order_count', 'discount', 'discount_type', 'status', 'tax', 'tax_type', 'stock', 'recommended', 'is_approved', 'is_halal', 'organic'],
       script_fields: (module !== 'movies' && hasGeo) ? {
         distance_km: { script: { source: "if (doc['store_location'].size() == 0) return null; doc['store_location'].arcDistance(params.lat, params.lon) / 1000.0", params: { lat, lon } } },
       } : undefined,
@@ -2832,7 +2849,7 @@ export class SearchService {
         },
       },
       size,
-      _source: ['name', 'slug', 'parent_id'],
+      _source: ['name', 'slug', 'parent_id', 'image'],
     };
 
     const [itemRes, storeRes, catRes] = await Promise.all([
@@ -2941,7 +2958,13 @@ export class SearchService {
       return true;
     });
 
-    return { module, q, items, stores, categories };
+    return { 
+      module, 
+      q, 
+      items: this.imageService.transformItemsWithImages(items), 
+      stores: this.imageService.transformStoresWithImages(stores), 
+      categories: this.imageService.transformCategoriesWithImages(categories) 
+    };
   }
 
   // Lightweight natural-language search agent
@@ -3340,7 +3363,7 @@ export class SearchService {
         },
       },
       size,
-      _source: ['name', 'slug', 'image', 'images', 'price', 'base_price', 'veg', 'category_id', 'category_name', 'store_id', 'store_location', 'module_id'],
+      _source: ['name', 'slug', 'image', 'images', 'price', 'base_price', 'veg', 'category_id', 'category_name', 'store_id', 'store_location', 'module_id', 'description', 'available_time_starts', 'available_time_ends', 'rating_count', 'avg_rating', 'order_count', 'discount', 'discount_type', 'status', 'tax', 'tax_type', 'stock', 'recommended', 'is_approved', 'is_halal', 'organic'],
       script_fields: hasGeo ? {
         distance_km: { script: { source: "if (doc['store_location'].size() == 0) return null; doc['store_location'].arcDistance(params.lat, params.lon) / 1000.0", params: { lat, lon } } },
       } : undefined,
@@ -3405,7 +3428,7 @@ export class SearchService {
         },
       },
       size,
-      _source: ['name', 'slug', 'parent_id', 'module_id'],
+      _source: ['name', 'slug', 'parent_id', 'module_id', 'image'],
     };
 
     // Execute parallel searches
@@ -3818,7 +3841,7 @@ export class SearchService {
               },
             },
             size,
-            _source: ['name', 'slug', 'parent_id', 'module_id'],
+            _source: ['name', 'slug', 'parent_id', 'module_id', 'image'],
           };
           
           const fallbackCatResults = await Promise.all(
@@ -3880,7 +3903,7 @@ export class SearchService {
               },
             },
             size: size * 2,
-            _source: ['name', 'slug', 'image', 'images', 'price', 'base_price', 'veg', 'category_id', 'category_name', 'store_id', 'store_location', 'module_id'],
+            _source: ['name', 'slug', 'image', 'images', 'price', 'base_price', 'veg', 'category_id', 'category_name', 'store_id', 'store_location', 'module_id', 'description', 'available_time_starts', 'available_time_ends', 'rating_count', 'avg_rating', 'order_count', 'discount', 'discount_type', 'status', 'tax', 'tax_type', 'stock', 'recommended', 'is_approved', 'is_halal', 'organic'],
             script_fields: hasGeo ? {
               distance_km: { script: { source: "if (doc['store_location'].size() == 0) return null; doc['store_location'].arcDistance(params.lat, params.lon) / 1000.0", params: { lat, lon } } },
             } : undefined,
@@ -3984,7 +4007,12 @@ export class SearchService {
       }
     }
 
-    return { q, items, stores, categories };
+    return { 
+      q, 
+      items: this.imageService.transformItemsWithImages(items), 
+      stores: this.imageService.transformStoresWithImages(stores), 
+      categories: this.imageService.transformCategoriesWithImages(categories) 
+    };
   }
 
   /**
@@ -4092,9 +4120,9 @@ export class SearchService {
     // Veg filter
     const veg = filters?.veg;
     if (veg === '1' || veg === 'true' || veg === 'veg') {
-      filterClauses.push({ term: { veg: true } });
+      filterClauses.push({ term: { veg: 1 } });
     } else if (veg === '0' || veg === 'false' || veg === 'non-veg') {
-      filterClauses.push({ term: { veg: false } });
+      filterClauses.push({ term: { veg: 0 } });
     }
 
     // Price range
@@ -4301,13 +4329,16 @@ export class SearchService {
         'id', 'name', 'slug', 'image', 'images', 'price', 'base_price', 
         'veg', 'category_id', 'category_name', 'store_id', 'store_location', 
         'module_id', 'description', 'available_time_starts', 'available_time_ends',
-        'rating_count', 'avg_rating', 'order_count'
+        'rating_count', 'avg_rating', 'order_count', 'discount', 'discount_type',
+        'status', 'tax', 'tax_type', 'stock', 'recommended', 'is_approved',
+        'is_halal', 'is_visible', 'organic', 'maximum_cart_quantity', 'unit_id',
+        'zone_id', 'store_name', 'brand', 'attributes'
       ],
       script_fields: hasGeo
         ? {
             distance_km: {
               script: {
-                source: "if (doc['store_location'].size() == 0) return null; doc['store_location'].arcDistance(params.lat, params.lon) / 1000.0",
+                source: "if (!doc.containsKey('store_location') || doc['store_location'].size() == 0) return null; doc['store_location'].arcDistance(params.lat, params.lon) / 1000.0",
                 params: { lat, lon },
               },
             },
@@ -4602,6 +4633,7 @@ export class SearchService {
               'name', 'description', 'image', 'images', 'slug', 'price', 'base_price', 'veg', 'brand',
               'category_id', 'category_name', 'store_id', 'avg_rating', 'order_count', 'store_location',
               'module_id', 'rating_count', 'available_time_starts', 'available_time_ends',
+              'discount', 'discount_type', 'status', 'tax', 'tax_type', 'stock', 'recommended', 'is_approved', 'is_halal', 'organic',
             ],
             script_fields: hasGeo ? {
               distance_km: {
@@ -4879,6 +4911,7 @@ export class SearchService {
               'name', 'description', 'image', 'images', 'slug', 'price', 'base_price', 'veg', 'brand',
               'category_id', 'category_name', 'store_id', 'avg_rating', 'order_count', 'store_location',
               'module_id', 'rating_count', 'available_time_starts', 'available_time_ends',
+              'discount', 'discount_type', 'status', 'tax', 'tax_type', 'stock', 'recommended', 'is_approved', 'is_halal', 'organic',
             ],
             script_fields: hasGeo ? {
               distance_km: {
@@ -5054,7 +5087,7 @@ export class SearchService {
           return {
             q,
             filters,
-            items,
+            items: this.imageService.transformItemsWithImages(items),
             meta: {
               total: fallbackTotalHits,
               page,
@@ -5070,14 +5103,47 @@ export class SearchService {
       }
     }
 
-    // Get store names
+    // Get store names and details (including location for distance calculation)
     const storeIds = [...new Set(allItems.map(item => item.store_id).filter(Boolean))];
     const storeNames = await this.getStoreNames(storeIds, 'all'); // Search all store indices
+    const storeDetails = await this.getStoreDetails(storeIds, 'all'); // Get store locations
 
-    const items = allItems.map(item => ({
-      ...item,
-      store_name: item.store_id ? storeNames[String(item.store_id)] : null,
-    }));
+    const items = allItems.map(item => {
+      let distanceKm = item.distance_km;
+      
+      // If item doesn't have distance_km but has store_id and we have geo coordinates,
+      // try to calculate distance from store location
+      if ((distanceKm === undefined || distanceKm === null || distanceKm === 0) && hasGeo && item.store_id) {
+        const storeDetail = storeDetails[String(item.store_id)];
+        if (storeDetail) {
+          // Try location.lat/lon first, then latitude/longitude
+          let storeLat: number | undefined;
+          let storeLon: number | undefined;
+          
+          if (storeDetail.location?.lat && storeDetail.location?.lon) {
+            storeLat = parseFloat(String(storeDetail.location.lat));
+            storeLon = parseFloat(String(storeDetail.location.lon));
+          } else if (storeDetail.latitude && storeDetail.longitude) {
+            storeLat = parseFloat(String(storeDetail.latitude));
+            storeLon = parseFloat(String(storeDetail.longitude));
+          }
+          
+          if (storeLat && storeLon && !Number.isNaN(storeLat) && !Number.isNaN(storeLon)) {
+            distanceKm = this.calculateDistance(lat!, lon!, storeLat, storeLon);
+            // Also add store_location to the item for consistency
+            if (!item.store_location) {
+              item.store_location = { lat: storeLat, lon: storeLon };
+            }
+          }
+        }
+      }
+      
+      return {
+        ...item,
+        distance_km: distanceKm,
+        store_name: item.store_id ? storeNames[String(item.store_id)] : null,
+      };
+    });
 
     // Log analytics
     this.analytics.logSearch({
@@ -5095,7 +5161,7 @@ export class SearchService {
     return {
       q,
       filters,
-      items,
+      items: this.imageService.transformItemsWithImages(items),
       meta: {
         total: totalHits,
         page,
@@ -6631,7 +6697,7 @@ export class SearchService {
     const response = {
       q,
       filters,
-      stores: paginatedStores,
+      stores: this.imageService.transformStoresWithImages(paginatedStores),
       meta: {
         total: totalHits,
         page,

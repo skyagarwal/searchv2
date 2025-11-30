@@ -38,6 +38,9 @@ function toNumBool(v) {
   return undefined;
 }
 
+// ✨ Fields that should remain as JSON strings (not parsed to objects)
+const KEEP_AS_STRING_FIELDS = ['gst', 'variations', 'add_ons', 'attributes', 'choice_options', 'food_variations', 'rating', 'close_time_slot'];
+
 function coerceDoc(doc) {
   const out = { ...doc };
   // common fields coercion
@@ -52,11 +55,14 @@ function coerceDoc(doc) {
       out.location = { lat, lon };
     }
   }
-  // parse JSON blobs
+  // parse JSON blobs - BUT SKIP fields that should stay as strings
   for (const k of Object.keys(out)) {
+    // ✨ Skip fields that must remain as strings
+    if (KEEP_AS_STRING_FIELDS.includes(k)) continue;
+    if (k === 'rating') continue; // keep rating as scalar/string
+    
     const v = out[k];
-  if (k === 'rating') continue; // keep rating as scalar/string
-  if (typeof v === 'string') {
+    if (typeof v === 'string') {
       const s = v.trim();
       if ((s.startsWith('[') && s.endsWith(']')) || (s.startsWith('{') && s.endsWith('}'))) {
         try { out[k] = JSON.parse(s); } catch (_) { /* ignore */ }
@@ -68,7 +74,6 @@ function coerceDoc(doc) {
     const v = out.category_ids;
     const toIds = (val) => {
       if (Array.isArray(val)) {
-        // could be array of {id:..} or primitives
         return val.map(x => {
           if (x && typeof x === 'object') {
             if (x.id !== undefined) return String(x.id);
@@ -79,7 +84,6 @@ function coerceDoc(doc) {
       }
       if (val && typeof val === 'object' && val.id !== undefined) return [String(val.id)];
       if (typeof val === 'string') {
-        // try to extract ids like '{id=3, position=1}' or JSON string of objects
         const m = val.match(/\"id\"\s*:\s*\"?(\d+)\"?/g);
         if (m) {
           return m.map(seg => (seg.match(/(\d+)/) || [,''])[1]).filter(Boolean);
@@ -88,7 +92,6 @@ function coerceDoc(doc) {
         if (m2) {
           return m2.map(seg => (seg.match(/(\d+)/) || [,''])[1]).filter(Boolean);
         }
-        // fallback single value
         if (val.length) return [val];
         return [];
       }
@@ -117,12 +120,6 @@ function coerceDoc(doc) {
       return [];
     };
     out.images = toImgStr(v);
-  }
-  // Coerce rating to number if possible
-  if (out.rating !== undefined) {
-    const r = Number(out.rating);
-    if (!Number.isNaN(r)) out.rating = r;
-    else if (typeof out.rating !== 'string') out.rating = JSON.stringify(out.rating);
   }
 
   // Stringify complex objects that are not handled elsewhere
@@ -236,7 +233,7 @@ async function main() {
     total += slice.length;
     console.log(`Indexed ${total}/${rows.length} into ${alias}`);
   }
-  console.log(`Indexed ${total} docs into ${alias}`);
+  console.log(`✅ Indexed ${total} docs into ${alias}`);
   await conn.end();
 }
 

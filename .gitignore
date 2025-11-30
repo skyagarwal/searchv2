@@ -84,3 +84,5 @@ redis-data/
 # Test outputs
 test-results/
 .nyc_output/
+myminio/
+letsencrypt/
