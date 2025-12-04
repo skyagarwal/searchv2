@@ -1,0 +1,12 @@
+http:
+  serversTransports:
+    websocket-transport:
+      # Extended timeouts for WebSocket connections
+      forwardingTimeouts:
+        dialTimeout: "30s"
+        responseHeaderTimeout: "0s"
+        idleConnTimeout: "0s"
+      maxIdleConnsPerHost: 200
+
+  # Remove the websocket-headers middleware - Socket.IO handles this automatically
+  # The browser will send proper Upgrade headers when needed
